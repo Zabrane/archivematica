@@ -179,6 +179,7 @@ class Transfer(models.Model):
     currentlocation = models.TextField(db_column='currentLocation')
     type = models.CharField(max_length=50, primary_key=True, db_column='type')
     accessionid = models.TextField(db_column='accessionID')
+    transfermetadatasetrowuuid = models.TextField(db_column='transferMetadataSetRowUUID')
     # ...
     hidden = models.BooleanField(default=False, blank=False)
 
@@ -529,3 +530,10 @@ class AtkDIPObjectResourcePairing(models.Model):
 
     class Meta:
         db_table = u'AtkDIPObjectResourcePairing'
+
+class TransferMetadataSet(models.Model):
+    id = UUIDPkField()
+    createdtime = models.DateTimeField(db_column='createdTime', auto_now_add=True)
+
+    class Meta:
+        db_table = u'TransferMetadataSets'
