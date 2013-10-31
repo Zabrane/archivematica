@@ -10,6 +10,10 @@
       <delay unitCtime="yes">2419200.0</delay>
     </preconfiguredChoice>
     <preconfiguredChoice>
+      <appliesTo>Examine contents</appliesTo>
+      <goToChain>Skip examine contents</goToChain>
+    </preconfiguredChoice>
+    <preconfiguredChoice>
       <appliesTo>Select pre-normalize file format identification command</appliesTo>
       <goToChain>Use existing data</goToChain>
     </preconfiguredChoice>
