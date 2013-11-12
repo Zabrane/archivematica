@@ -39,6 +39,7 @@ from components.api.views import approve_transfer_via_mcp
 import sys
 sys.path.append("/usr/lib/archivematica/archivematicaCommon")
 import databaseInterface
+from executeOrRunSubProcess import executeOrRun
 
 def _transfer_storage_path(uuid):
     transfer = models.Transfer.objects.get(uuid=uuid)
@@ -216,6 +217,10 @@ def _fetch_content(transfer_uuid, object_content_urls):
     databaseInterface.runSQL(sql)
     _flush_transaction() # refresh ORM after manual SQL
 
+    command = '/usr/lib/archivematica/MCPClient/clientScripts/fetchFedoraCommonsObjectContent.py ' + arguments
+    exitCode, stdOut, stdError = executeOrRun("command", command)
+
+    """
     # submit job to gearman
     gm_client = gearman.GearmanClient(['localhost:4730'])
     data = {'createdDate' : datetime.datetime.now().__str__()}
@@ -225,9 +230,11 @@ def _fetch_content(transfer_uuid, object_content_urls):
         cPickle.dumps(data),
         task_uuid
     )
+    """
 
     # record task completion time
     task = models.Task.objects.get(taskuuid=task_uuid)
+    task.exitcode = exitCode
     task.endtime = datetime.datetime.now().__str__() # TODO: endtime seems weird... Django time zone issue?
     task.save()
 
@@ -268,7 +275,7 @@ Example GET of transfers list:
 
 Example POST creation of transfer:
 
-  curl -v -H "In-Progress: true" -d "some METS XML" --request POST http://localhost/api/v2/transfer/sword
+  curl -v -H "In-Progress: true" -d @mets.xml --request POST http://localhost/api/v2/transfer/sword
 """
 # TODO: add authentication
 # TODO: error is transfer completed, but has no files?
@@ -321,7 +328,7 @@ def transfer_collection(request):
                         if transfer_uuid != None:
                             # TODO: parse XML and start fetching jobs if needed
                             mock_object_content_urls = [
-                                'http://192.168.1.231:8080/fedora/objects/hat:man/datastreams/rickpic/content'
+                                'http://192.168.1.74:8080/fedora/objects/people:rick/datastreams/rick_pic/content'
                             ]
 
                             # create thread so content URLs can be downloaded asynchronously
