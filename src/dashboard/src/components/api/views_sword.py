@@ -559,6 +559,7 @@ def transfer_state(request, uuid):
         # get transfer creation job, if any
         job = None
         try:
+            # get job corresponding to transfer
             job = models.Job.objects.filter(sipuuid=uuid, hidden=True)[0]
 
             task = None
@@ -572,7 +573,10 @@ def transfer_state(request, uuid):
                 task_state = 'Processing'
 
             if task.endtime != None:
-                task_state = 'Complete'
+                if task.exitcode == 1:
+                    task_state = 'Failed'
+                else:
+                    task_state = 'Complete'
         except:
             task_state = 'Complete'
 
