@@ -108,11 +108,13 @@ def check_manual_normalization(opts):
                 filename = access_file
             else:
                 return None
-            return File.objects.get(sip=opts.sip_uuid, originallocation__endswith=filename).currentlocation #removedtime = 0
+            print('Looking for', filename, 'in database')
+            return File.objects.get(sip=opts.sip_uuid, originallocation__iendswith=filename).currentlocation #removedtime = 0
 
     # Assume that any access/preservation file found with the right
     # name is the correct one
     bname, _ = os.path.splitext(bname)
+    dirname = dirname.replace(opts.sip_path, '%SIPDirectory%')
     path = os.path.join(dirname, bname)
     if "preservation" in opts.purpose:
         path = path.replace("%SIPDirectory%objects/",
@@ -123,7 +125,7 @@ def check_manual_normalization(opts):
     else:
         return None
     try:
-        return File.objects.get(sip=opts.sip_uuid, originallocation__startswith=path).currentlocation #removedtime = 0
+        return File.objects.get(sip=opts.sip_uuid, currentlocation__startswith=path).currentlocation #removedtime = 0
     except File.DoesNotExist, File.MultipleObjectsReturned:
         # No file with the correct path found, assume not manually normalized
         return None
@@ -207,8 +209,6 @@ def once_normalized(command, opts, replacement_dict):
 def main(opts):
     """ Find and execute normalization commands on input file. """
     # TODO fix for maildir working only on attachments
-    # TODO use existing Command class??  Take most of transcoder but update 'startup' code?
-    # Replace transcoderNormalizer.executeFPRule with the setup code from here, and use transcoder.Command/CommandLinker.  Update transcoderNormalize.getReplacementDict to use this one.  Clean up usages of opts in transcoderNormalizer to use the argparse opts and stuff
 
     # Find the file and it's FormatVersion (file identification)
     try:
@@ -222,6 +222,11 @@ def main(opts):
     # because transcoding did so before
     if file_.currentlocation.startswith('%SIPDirectory%objects/submissionDocumentation'):
         print('File', os.path.basename(opts.file_path), 'in objects/submissionDocumentation, skipping')
+        return 0
+
+    # Only normalize files where the file's group use and normalize group use match
+    if file_.filegrpuse != opts.normalize_file_grp_use:
+        print(os.path.basename(opts.file_path), 'is file group usage', file_.filegrpuse, 'instead of ', opts.normalize_file_grp_use, ' - skipping')
         return 0
 
     # If a file has been manually normalized for this purpose, skip it
@@ -253,7 +258,7 @@ def main(opts):
         purpose=opts.purpose)
     except FPRule.DoesNotExist:
         try:
-            command = FPRule.active.get(format=format_id.format_version, purpose='default_'+opts.purpose)
+            rule = FPRule.active.get(purpose='default_'+opts.purpose)
             print("No rule for", os.path.basename(file_.currentlocation),
                 "falling back to default", opts.purpose, "rule")
         except FPRule.DoesNotExist:
