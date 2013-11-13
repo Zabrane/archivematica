@@ -2,19 +2,63 @@
 from __future__ import print_function
 import argparse
 import csv
+import datetime
 import os
 import sys
 import traceback
+import uuid
+
+import transcoder
 
 sys.path.append("/usr/lib/archivematica/archivematicaCommon")
-from executeOrRunSubProcess import executeOrRun
+import databaseFunctions
+import databaseInterface
+import fileOperations
 
 path = '/usr/share/archivematica/dashboard'
 if path not in sys.path:
     sys.path.append(path)
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings.common'
-from fpr.models import FPCommand
+from fpr.models import FPRule
 from main.models import FileFormatVersion, File
+
+def get_replacement_dict(opts):
+    """ Generates values for all knows %var% replacement variables. """
+    prefix = ""
+    postfix = ""
+    output_dir = ""
+    #get file name and extension
+    (directory, basename) = os.path.split(opts.file_path)
+    directory += os.path.sep  # All paths should have trailing /
+    (filename, extension_dot) = os.path.splitext(basename)
+
+    if "preservation" in opts.purpose:
+        postfix = "-" + opts.task_uuid
+        output_dir = directory
+    elif "access" in opts.purpose:
+        prefix = opts.file_uuid + "-"
+        output_dir = os.path.join(opts.sip_path, "DIP", "objects") + os.path.sep
+    elif "thumbnail" in opts.purpose:
+        output_dir = os.path.join(opts.sip_path, "thumbnails") + os.path.sep
+        postfix = opts.file_uuid
+    else:
+        print("Unsupported command purpose", opts.purpose, file=sys.stderr)
+        return None
+
+    output_filename = ''.join([prefix, filename, postfix])
+    replacement_dict = {
+        "%inputFile%": opts.file_path,
+        "%outputDirectory%": output_dir,
+        "%fileExtensionWithDot%": extension_dot,
+        "%fileFullName%": opts.file_path,
+        "%fileName%":  filename,
+        "%prefix%": prefix,
+        "%postfix%": postfix,
+        "%outputFileName%": output_filename, # does not include extension
+        "%outputFilePath%": os.path.join(output_dir, output_filename) # does not include extension
+    }
+    return replacement_dict
+
 
 def check_manual_normalization(opts):
     """ Checks for manually normalized file, returns that path or None. 
@@ -44,8 +88,7 @@ def check_manual_normalization(opts):
                         found = True
                         break
             except csv.Error:
-                print >>sys.stderr, "Error reading {filename} on line {linenum}".format(
-                    filename=normalization_csv, linenum=reader.line_num)
+                print("Error reading", normalization_csv, " on line", reader.line_num, file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
                 return None
 
@@ -65,7 +108,7 @@ def check_manual_normalization(opts):
                 filename = access_file
             else:
                 return None
-            return File.objects.get(sipUUID=opts.sip_uuid, originallocation__endswith=filename).currentlocation #removedtime = 0
+            return File.objects.get(sip=opts.sip_uuid, originallocation__endswith=filename).currentlocation #removedtime = 0
 
     # Assume that any access/preservation file found with the right
     # name is the correct one
@@ -80,58 +123,86 @@ def check_manual_normalization(opts):
     else:
         return None
     try:
-        return File.objects.get(sipUUID=opts.sip_uuid, originallocation__startswith=path).currentlocation #removedtime = 0
-    except Exception:
-        print("DEBUG EXCEPTION!")
-        traceback.print_exc(file=sys.stdout)
+        return File.objects.get(sip=opts.sip_uuid, originallocation__startswith=path).currentlocation #removedtime = 0
+    except File.DoesNotExist, File.MultipleObjectsReturned:
+        # No file with the correct path found, assume not manually normalized
+        return None
     return None
 
-def get_replacement_dict(opts):
-    """ Generates values for all knows %var% replacement variables. """
-    prefix = ""
-    postfix = ""
-    output_dir = ""
-    #get file name and extension
-    (directory, basename) = os.path.split(opts.file_path)
-    directory+=os.path.sep  # All paths should have trailing /
-    (filename, extension_dot) = os.path.splitext(basename)
+def once_normalized(command, opts, replacement_dict):
+    """ Updates the database if normalization completed successfully.
 
-    if "preservation" in opts.purpose:
-        postfix = "-" + opts.task_uuid
-        output_dir = directory
-    elif "access" in opts.purpose:
-        prefix = opts.file_uuid + "-"
-        output_dir = os.path.join(opts.sip_path, "DIP", "objects") + os.path.sep
-    elif "thumbnail" in opts.purpose:
-        output_dir = os.path.join(opts.sip_path, "thumbnails") + os.path.sep
-        postfix = opts.file_uuid
-    else:
-        print("Unsupported command purpose", opts.purpose, file=sys.stderr)
-        return None
+    Callback from transcoder.Command
 
-    replacement_dict = {
-        "%inputFile%": opts.file_path,
-        "%outputDirectory%": output_dir,
-        "%fileExtensionWithDot%": extension_dot,
-        "%fileFullName%": opts.file_path,
-        "%fileName%":  filename,
-        "%prefix%": prefix,
-        "%postfix%": postfix,
-        "%outputFileName%": ''.join([output_dir, prefix, filename, postfix])
-    }
-    return replacement_dict
+    For preservation files, adds a normalization event, and derivation, as well
+    as updating the size and checksum for the new file in the DB.  Adds format
+    information for use in the METS file to FilesIDs.
+    """
+    transcoded_files = []
+    if not command.output_location:
+        command.output_location = ""
+    if os.path.isfile(command.output_location):
+        transcoded_files.append(command.output_location)
+    elif os.path.isdir(command.output_location):
+        for w in os.walk(command.output_location):
+            path, _, files = w
+            for p in files:
+                p = os.path.join(path, p)
+                if os.path.isfile(p):
+                    transcoded_files.append(p)
+    elif command.output_location:
+        print("Error - output file does not exist [", command.output_location, "]", file=sys.stderr)
+        command.exit_code = -2
 
-def replace_vars(command, opts):
-    """ Replaces all instances of %var% in command. """
-    replacement_dict = get_replacement_dict(opts)
-    for (replace_var, value) in replacement_dict.iteritems():
-        command = command.replace(replace_var, value)
-    return command
+    derivation_event_uuid = str(uuid.uuid4())
+    event_detail_output = 'ArchivematicaFPRCommandID="%s"'.format(command.fpcommand.uuid)
+    if command.event_detail_command is not None:
+        event_detail_output += '; {}'.format(command.event_detail_command.std_out)
+    for ef in transcoded_files:
+        if "preservation" in opts.purpose:
+            today = str(datetime.date.today())
+            output_file_uuid = opts.task_uuid # File UUID is the same as task UUID for preservation
+            # TODO Add manual normalization for files of same name mapping?
+            #Add the new file to the SIP
+            path_relative_to_sip = ef.replace(opts.sip_path, "%SIPDirectory%", 1)
+            fileOperations.addFileToSIP(
+                path_relative_to_sip,
+                output_file_uuid, # File UUID
+                opts.sip_uuid, # SIP UUID
+                opts.task_uuid, # Task UUID
+                today, # Current date
+                sourceType="creation",
+                use="preservation",
+            )
+            #Add event information to current file
+            databaseFunctions.insertIntoEvents(
+               fileUUID=opts.file_uuid,
+               eventIdentifierUUID=derivation_event_uuid,
+               eventType="normalization",
+               eventDateTime=today,
+               eventDetail=event_detail_output,
+               eventOutcome="",
+               eventOutcomeDetailNote=path_relative_to_sip
+            )
 
-def get_output_file_path(opts):
-    """ Returns the absolute filename (sans extension) of the output file. """
-    replacement_dict = get_replacement_dict(opts)
-    return replacement_dict['%outputFileName%']
+            #Calculate new file checksum
+            fileOperations.updateSizeAndChecksum(
+                output_file_uuid, # File UUID, same as task UUID for preservation
+                ef, # File path
+                today, # Date
+                str(uuid.uuid4()), # Event UUID, new UUID
+            )
+
+            #Add linking information between files
+            databaseFunctions.insertIntoDerivations(
+                sourceFileUUID=opts.file_uuid,
+                derivedFileUUID=output_file_uuid,
+                relatedEventUUID=derivation_event_uuid,
+            )
+
+            sql = "INSERT INTO FilesIDs (fileUUID, formatName, formatVersion, formatRegistryName, formatRegistryKey) VALUES ('%s', '%s', NULL, NULL, NULL);" % (output_file_uuid, command.fpcommand.output_format.description)
+            databaseInterface.runSQL(sql)
+
 
 def main(opts):
     """ Find and execute normalization commands on input file. """
@@ -139,16 +210,27 @@ def main(opts):
     # TODO use existing Command class??  Take most of transcoder but update 'startup' code?
     # Replace transcoderNormalizer.executeFPRule with the setup code from here, and use transcoder.Command/CommandLinker.  Update transcoderNormalize.getReplacementDict to use this one.  Clean up usages of opts in transcoderNormalizer to use the argparse opts and stuff
 
-    manually_normalized_file = check_manual_normalization(opts)
-    if manually_normalized_file:
-        print(opts.file_path, 'was already manually normalized into', manually_normalized_file)
-
+    # Find the file and it's FormatVersion (file identification)
     try:
         file_ = File.objects.get(uuid=opts.file_uuid)
     except File.DoesNotExist:
         print('File with uuid', opts.file_uuid, 'does not exist.', file=sys.stderr)
-        return
-    print('file', file_)
+        return -1
+    print('File found:', file_.uuid, file_.currentlocation)
+
+    # Skip objects/submissionDocumentation
+    # because transcoding did so before
+    if file_.currentlocation.startswith('%SIPDirectory%objects/submissionDocumentation'):
+        print('File', os.path.basename(opts.file_path), 'in objects/submissionDocumentation, skipping')
+        return 0
+
+    # If a file has been manually normalized for this purpose, skip it
+    # TODO test this
+    manually_normalized_file = check_manual_normalization(opts)
+    if manually_normalized_file:
+        print(os.path.basename(opts.file_path), 'was already manually normalized into', manually_normalized_file)
+        return 0
+
     try:
         format_id = FileFormatVersion.objects.get(file_uuid=opts.file_uuid)
     # Can't do anything if the file wasn't identified
@@ -157,48 +239,69 @@ def main(opts):
             os.path.basename(file_.currentlocation),
             ' - file format not identified',
             file=sys.stderr)
-        return
+        return -1
     if format_id.format_version == None:
         print('Not normalizing',
             os.path.basename(file_.currentlocation),
             ' - file format not identified',
             file=sys.stderr)
-        return
-    print('format_version', format_id.format_version)
-    # Normalization commands are defined in the FPR
+        return -1
+    print('File format:', format_id.format_version)
+    # Look up the normalization command in the FPR
     try:
-        command = FPCommand.active.get(fprule__format=format_id.format_version,
-        fprule__purpose=opts.purpose)
-    except FPCommand.DoesNotExist:
+        rule = FPRule.active.get(format=format_id.format_version,
+        purpose=opts.purpose)
+    except FPRule.DoesNotExist:
         try:
-            command = FPCommand.active.get(fprule__format=format_id.format_version, fprule__purpose='default_'+opts.purpose)
-        except FPCommand.DoesNotExist:
+            command = FPRule.active.get(format=format_id.format_version, purpose='default_'+opts.purpose)
+            print("No rule for", os.path.basename(file_.currentlocation),
+                "falling back to default", opts.purpose, "rule")
+        except FPRule.DoesNotExist:
             print('Not normalizing', os.path.basename(file_.currentlocation),
                 ' - No rule or default rule found to normalize for', opts.purpose,
                 file=sys.stderr)
-            return
+            return -1
+    print('Format Policy Rule:', rule)
+    command = rule.command
+    print('Format Policy Command', command.description)
 
-    print('command', command.description, command.command)
-    if command.script_type == 'command' or command.script_type == 'bashScript':
-        args = []
-        command_to_execute = replace_vars(command.command, opts)
-    else:
-        command_to_execute = command.command
-        args = [opts.file_path, get_output_file_path()]
+    replacement_dict = get_replacement_dict(opts)
+    cl = transcoder.CommandLinker(rule, command, replacement_dict, opts, once_normalized)
+    exitstatus = cl.execute()
 
-    print('command_to_execute, args', command_to_execute, args, 'endargs')
-    exitstatus, stdout, stderr = executeOrRun(command.script_type,
-                                    command_to_execute,
-                                    arguments=args,
-                                    printing=True)
+    # TODO Stuff with thumbnails
+    # # store thumbnails for use during AIP searches
+    # if opts["commandClassification"] == 'thumbnail':
+    #     thumbnail_filepath = cl.commandObject.outputLocation.__str__()
+    #     thumbnail_storage_dir = os.path.join(
+    #         archivematicaClient.replacementDic['%sharedPath%'],
+    #         'www',
+    #         'thumbnails',
+    #         opts['sipUUID']
+    #     )
+
+    #     try:
+    #         os.makedirs(thumbnail_storage_dir)
+    #     except OSError as e:
+    #         if e.errno == errno.EEXIST and os.path.isdir(thumbnail_storage_dir):
+    #             pass
+    #         else: raise
+
+    #     thumbnail_basename, thumbnail_extension = os.path.splitext(thumbnail_filepath)
+    #     thumbnail_storage_file = os.path.join(
+    #         thumbnail_storage_dir,
+    #         opts["fileUUID"] + thumbnail_extension
+    #     )
+
+    #     shutil.copyfile(thumbnail_filepath, thumbnail_storage_file)
 
     if not exitstatus == 0:
         # Dang, looks like the normalization failed
         print('Command', command.description, 'failed!', file=sys.stderr)
+        return 1
     else:
-        print('Normalized ', os.path.basename(opts.file_path), 'for', opts.purpose)
-
-    # TODO add to DB
+        print('Successfully normalized ', os.path.basename(opts.file_path), 'for', opts.purpose)
+        return 0
 
 
 if __name__ == '__main__':
