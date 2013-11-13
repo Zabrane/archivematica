@@ -415,7 +415,10 @@ def transfer(request, uuid):
             # ...task row must exist and task endtime must be equal to or greater than start time
             try:
                 if _transfer_is_being_processed(uuid):
-                    bad_request = 'This transfer has already been started and approved.'
+                    error = {
+                        'summary': 'This transfer has already been started and approved.',
+                        'status': 400
+                    }
                 else:
                     transfer = models.Transfer.objects.get(uuid=uuid)
 
