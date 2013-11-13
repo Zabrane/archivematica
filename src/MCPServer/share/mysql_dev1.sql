@@ -19,4 +19,35 @@ INSERT INTO MicroServiceChainLinksExitCodes (pk, microServiceChainLink, exitCode
 UPDATE MicroServiceChainLinksExitCodes SET nextMicroServiceChainLink='bcabd5e2-c93e-4aaa-af6a-9a74d54e8bf0' WHERE microServiceChainLink='4103a5b0-e473-4198-8ff7-aaa6fec34749';
 UPDATE MicroServiceChainLinks SET defaultNextChainLink='bcabd5e2-c93e-4aaa-af6a-9a74d54e8bf0' WHERE pk='4103a5b0-e473-4198-8ff7-aaa6fec34749';
 
+-- Remove old normalization chains
+-- This table will no longer be used
+DROP TABLE TasksConfigsStartLinkForEachFile;
+-- "Find access links to run"
+SET @mscl1='bf11cf60-c7aa-478f-98a6-2dd9647aa35f' COLLATE utf8_unicode_ci;
+SET @mscl2='eca5731c-d6a3-4e20-a83f-dde167dd7642' COLLATE utf8_unicode_ci;
+-- "Find type to process as"
+SET @mscl3='d02ac4b4-eb48-45ee-a1b4-ba1e9f0eff78' COLLATE utf8_unicode_ci;
+-- "Find access links to run" chain that includes thumbnail/preservation
+SET @mscl4='f7a8ff81-e00e-4583-857d-7d9a1fdc93f8' COLLATE utf8_unicode_ci;
+SET @mscl5='760b0bcb-e001-49d1-9936-30cfe2ca0ea1' COLLATE utf8_unicode_ci;
+SET @mscl6='eafd05a1-9aac-464e-83ce-a16d5429c7a1' COLLATE utf8_unicode_ci;
+-- "Find thumbnail links to run"
+SET @mscl7='28b9c4bc-1383-4992-9baf-c455dde1393d' COLLATE utf8_unicode_ci;
+-- "Find preservation links to run"
+SET @mscl8='6c4f4838-4573-4f08-8082-3aacf04f9dac' COLLATE utf8_unicode_ci;
+SET @mscl9='c1fe87ad-25d4-4753-8dd5-b7b597616765' COLLATE utf8_unicode_ci;
+-- "Find access links to run"
+SET @mscl10='4fac5503-8fff-4c18-acf4-5b4d62654e0f' COLLATE utf8_unicode_ci;
+-- "Find thumbnail links to run"
+SET @mscl11='4081dc41-48df-4658-a286-0d02eca7d953' COLLATE utf8_unicode_ci;
+
+DELETE FROM MicroServiceChainLinksExitCodes WHERE microServiceChainLink IN (@mscl1, @mscl2, @mscl3, @mscl4, @mscl5, @mscl6, @mscl7, @mscl8, @mscl9, @mscl10, @mscl11);
+DELETE FROM MicroServiceChains WHERE startingLink IN (@mscl1, @mscl2, @mscl3, @mscl4, @mscl5, @mscl6, @mscl7, @mscl8, @mscl9, @mscl10, @mscl11);
+DELETE FROM MicroServiceChainLinks WHERE pk IN (@mscl1, @mscl2, @mscl3, @mscl4, @mscl5, @mscl6, @mscl7, @mscl8, @mscl9, @mscl10, @mscl11);
+DELETE FROM StandardTasksConfigs WHERE pk IN
+(SELECT taskTypePKReference from MicroServiceChainLinks INNER JOIN TasksConfigs ON currentTask = TasksConfigs.pk
+ WHERE MicroServiceChainLinks.pk IN (@mscl1, @mscl2, @mscl3, @mscl4, @mscl5, @mscl6, @mscl7, @mscl8, @mscl9, @mscl10, @mscl11));
+DELETE FROM TasksConfigs WHERE pk IN
+(SELECT currentTask FROM MicroServiceChainLinks WHERE MicroServiceChainLinks.pk in (@mscl1, @mscl2, @mscl3, @mscl4, @mscl5, @mscl6, @mscl7, @mscl8, @mscl9, @mscl10, @mscl11));
+
 -- /Issue ???
