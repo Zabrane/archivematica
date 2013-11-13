@@ -1,9 +1,12 @@
 #!/usr/bin/python2 -OO
 from __future__ import print_function
 import argparse
+import ConfigParser
 import csv
 import datetime
+import errno
 import os
+import shutil
 import sys
 import traceback
 import uuid
@@ -230,7 +233,6 @@ def main(opts):
         return 0
 
     # If a file has been manually normalized for this purpose, skip it
-    # TODO test this
     manually_normalized_file = check_manual_normalization(opts)
     if manually_normalized_file:
         print(os.path.basename(opts.file_path), 'was already manually normalized into', manually_normalized_file)
@@ -252,6 +254,7 @@ def main(opts):
             file=sys.stderr)
         return -1
     print('File format:', format_id.format_version)
+
     # Look up the normalization command in the FPR
     try:
         rule = FPRule.active.get(format=format_id.format_version,
@@ -274,31 +277,37 @@ def main(opts):
     cl = transcoder.CommandLinker(rule, command, replacement_dict, opts, once_normalized)
     exitstatus = cl.execute()
 
-    # TODO Stuff with thumbnails
-    # # store thumbnails for use during AIP searches
-    # if opts["commandClassification"] == 'thumbnail':
-    #     thumbnail_filepath = cl.commandObject.outputLocation.__str__()
-    #     thumbnail_storage_dir = os.path.join(
-    #         archivematicaClient.replacementDic['%sharedPath%'],
-    #         'www',
-    #         'thumbnails',
-    #         opts['sipUUID']
-    #     )
+    # Store thumbnails locally for use during AIP searches
+    # TODO is this still needed, with the storage service?
+    if 'thumbnail' in opts.purpose:
+        thumbnail_filepath = cl.commandObject.output_location
+        clientConfigFilePath = '/etc/archivematica/MCPClient/clientConfig.conf'
+        config = ConfigParser.SafeConfigParser()
+        config.read(clientConfigFilePath)
+        try:
+            shared_path = config.get('MCPClient', 'sharedDirectoryMounted')
+        except:
+            shared_path = '/var/archivematica/sharedDirectory/'
+        thumbnail_storage_dir = os.path.join(
+            shared_path,
+            'www',
+            'thumbnails',
+            opts.sip_uuid,
+        )
+        try:
+            os.makedirs(thumbnail_storage_dir)
+        except OSError as e:
+            if e.errno == errno.EEXIST and os.path.isdir(thumbnail_storage_dir):
+                pass
+            else:
+                raise
+        thumbnail_basename, thumbnail_extension = os.path.splitext(thumbnail_filepath)
+        thumbnail_storage_file = os.path.join(
+            thumbnail_storage_dir,
+            opts.file_uuid + thumbnail_extension,
+        )
 
-    #     try:
-    #         os.makedirs(thumbnail_storage_dir)
-    #     except OSError as e:
-    #         if e.errno == errno.EEXIST and os.path.isdir(thumbnail_storage_dir):
-    #             pass
-    #         else: raise
-
-    #     thumbnail_basename, thumbnail_extension = os.path.splitext(thumbnail_filepath)
-    #     thumbnail_storage_file = os.path.join(
-    #         thumbnail_storage_dir,
-    #         opts["fileUUID"] + thumbnail_extension
-    #     )
-
-    #     shutil.copyfile(thumbnail_filepath, thumbnail_storage_file)
+        shutil.copyfile(thumbnail_filepath, thumbnail_storage_file)
 
     if not exitstatus == 0:
         # Dang, looks like the normalization failed
