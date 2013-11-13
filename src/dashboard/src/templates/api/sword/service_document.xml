@@ -8,7 +8,7 @@
   <workspace>
     <atom:title>Archivematica</atom:title>
 
-    <collection href="{% url 'components.api.views_sword.transfer_collection' %}">
+    <collection href="{{ transfer_collectiion_url }}">
       <atom:title>Transfers</atom:title>
       <accept>*/*</accept>
       <accept alternate="multipart-related">*/*</accept>

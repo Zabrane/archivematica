@@ -242,8 +242,21 @@ def _fetch_content(transfer_uuid, object_content_urls):
     shutil.rmtree(temp_dir)
 
 # respond with SWORD 2.0 deposit receipt XML
-def _deposit_receipt_response(transfer_uuid, status_code):
-    receipt_xml = render_to_string('api/sword/deposit_receipt.xml', {'transfer_uuid': transfer_uuid})
+def _deposit_receipt_response(request, transfer_uuid, status_code):
+    media_iri = request.build_absolute_uri(
+        reverse('components.api.views_sword.transfer_files', args=[transfer_uuid])
+    )
+
+    edit_iri = request.build_absolute_uri(
+        reverse('components.api.views_sword.transfer', args=[transfer_uuid])
+    )
+
+    state_iri = request.build_absolute_uri(
+        reverse('components.api.views_sword.transfer_state', args=[transfer_uuid])
+    )
+
+    receipt_xml = render_to_string('api/sword/deposit_receipt.xml', locals())
+
     response = HttpResponse(receipt_xml, mimetype='text/xml', status=status_code)
     response['Location'] = transfer_uuid
     return response
@@ -263,7 +276,11 @@ Example GET of service document:
   curl -v http://127.0.0.1/api/v2/sword
 """
 def service_document(request):
-    service_document_xml = render_to_string('api/sword/service_document.xml')
+    transfer_collectiion_url = request.build_absolute_uri(
+        reverse('components.api.views_sword.transfer_collection')
+    )
+
+    service_document_xml = render_to_string('api/sword/service_document.xml', locals())
     response = HttpResponse(service_document_xml)
     response['Content-Type'] = 'application/atomserv+xml'
     return response
@@ -287,7 +304,7 @@ def transfer_collection(request):
         # return list of transfers as ATOM feed
         feed = {
             'title': 'Transfers',
-            'url': reverse('components.api.views_sword.transfer_collection')
+            'url': request.build_absolute_uri(reverse('components.api.views_sword.transfer_collection'))
         }
 
         entries = []
@@ -296,7 +313,7 @@ def transfer_collection(request):
             transfer = models.Transfer.objects.get(uuid=uuid)
             entries.append({
                 'title': os.path.basename(transfer.currentlocation),
-                'url': reverse('components.api.views_sword.transfer', args=[uuid])
+                'url': request.build_absolute_uri(reverse('components.api.views_sword.transfer', args=[uuid]))
             })
 
         collection_xml = render_to_string('api/sword/collection.xml', locals())
@@ -335,20 +352,30 @@ def transfer_collection(request):
                             thread = threading.Thread(target=_fetch_content, args=(transfer_uuid, mock_object_content_urls))
                             thread.start()
 
-                            return _deposit_receipt_response(transfer_uuid, 201)
+                            return _deposit_receipt_response(request, transfer_uuid, 201)
                         else:
                             error = {
                                 'summary': 'Could not create transfer: contact an administrator.',
                                 'status': 500
                         }
                     except etree.XMLSyntaxError:
-                        bad_request = 'Error parsing XML.'
-                except:
-                    bad_request = 'Error writing temp file.'
+                        error = {
+                            'summary': 'Error parsing XML.',
+                            'status': 412
+                        }
+                except Exception as e:
+                    bad_request = str(e)
             else:
-                bad_request = 'A request body must be sent when creating a transfer.'
+                error = {
+                    'summary': 'A request body must be sent when creating a transfer.',
+                    'status': 412
+                }
         else:
-            bad_request = 'The In-Progress header must be set to true when creating a transfer.'
+            # TODO: way to do one-step transfer creation by setting In-Progress to false
+            error = {
+                'summary': 'The In-Progress header must be set to true when creating a transfer.',
+                'status': 412
+            }
     else:
         error = {
             'summary': 'This endpoint only responds to the GET and POST HTTP methods.',
@@ -404,7 +431,7 @@ def transfer(request, uuid):
                         1
                         ) # TODO: replace hardcoded user ID
 
-                        return _deposit_receipt_response(uuid, 200)
+                        return _deposit_receipt_response(request, uuid, 200)
                     else:
                         bad_request = 'This transfer contains no files.'
 

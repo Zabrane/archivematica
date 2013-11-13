@@ -11,9 +11,9 @@
     <sword:treatment>A temporary transfer directory was created.</sword:treatment>
 
     <link rel="alternate" href="http://www.swordserver.ac.uk/col1/mydeposit.html"/>
-    <link rel="edit-media" href="{% url 'components.api.views_sword.transfer_files' transfer_uuid %}"/>
-    <link rel="edit" href="{% url 'components.api.views_sword.transfer' transfer_uuid %}" />
-    <link rel="http://purl.org/net/sword/terms/add" href="{% url 'components.api.views_sword.transfer' transfer_uuid %}" />
+    <link rel="edit-media" href="{{ media_iri }}"/>
+    <link rel="edit" href="{{ edit_iri }}" />
+    <link rel="http://purl.org/net/sword/terms/add" href="{{ edit_iri }}" />
     <link rel="http://purl.org/net/sword/terms/statement" type="application/atom+xml;type=feed"
-      href="{% url 'components.api.views_sword.transfer_state' transfer_uuid %}" />
+      href="{{ state_iri }}" />
 </entry>
