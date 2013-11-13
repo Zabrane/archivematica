@@ -221,9 +221,9 @@ def main(opts):
         return -1
     print('File found:', file_.uuid, file_.currentlocation)
 
-    # Skip objects/submissionDocumentation
-    # because transcoding did so before
-    if file_.currentlocation.startswith('%SIPDirectory%objects/submissionDocumentation'):
+    # Unless normalization file group use is submissionDocumentation, skip the
+    # submissionDocumentation directory
+    if opts.normalize_file_grp_use != "submissionDocumentation" and file_.currentlocation.startswith('%SIPDirectory%objects/submissionDocumentation'):
         print('File', os.path.basename(opts.file_path), 'in objects/submissionDocumentation, skipping')
         return 0
 
