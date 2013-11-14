@@ -15,19 +15,19 @@ SET @normalizeThumServTC = '21f8f2b6-d285-490a-9276-bfa87a0a4fb9' COLLATE utf8_u
 
 -- Original, preservation
 INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('7478e34b-da4b-479b-ad2e-5a3d4473364f', 0, 'normalize_v1.0', 'preservation "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "original"', 'objects/');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizePresTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '7478e34b-da4b-479b-ad2e-5a3d4473364f', 'Normalize for preservation - NEW, ORIG');
+INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizePresTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '7478e34b-da4b-479b-ad2e-5a3d4473364f', 'Normalize for preservation');
 -- Original, access
 INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('3c256437-6435-4307-9757-fbac5c07541c', 0, 'normalize_v1.0', 'access "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "original"', 'objects/');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeAccTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '3c256437-6435-4307-9757-fbac5c07541c', 'Normalize for access - NEW, ORIG');
+INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeAccTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '3c256437-6435-4307-9757-fbac5c07541c', 'Normalize for access');
 -- Original, Thumbnails
 INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('8fe4a2c3-d43c-41e4-aeb9-18e8f57c9ccf', 0, 'normalize_v1.0', 'thumbnail "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "original"', 'objects/');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeThumTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '8fe4a2c3-d43c-41e4-aeb9-18e8f57c9ccf', 'Normalize for thumbnails - NEW, ORIG');
+INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeThumTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '8fe4a2c3-d43c-41e4-aeb9-18e8f57c9ccf', 'Normalize for thumbnails');
 -- Service, Access
 INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('6dccf7b3-4282-46f9-a805-1297c6ea482b', 0, 'normalize_v1.0', 'access "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "service"', 'objects/');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeAccServTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '6dccf7b3-4282-46f9-a805-1297c6ea482b', 'Normalize for access - NEW, SERVICE');
+INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeAccServTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '6dccf7b3-4282-46f9-a805-1297c6ea482b', 'Normalize for access');
 -- Service, Thumbnails
 INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('26309e7d-6435-4700-9171-131005f29cbb', 0, 'normalize_v1.0', 'thumbnail "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "service"', 'objects/');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeThumServTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '26309e7d-6435-4700-9171-131005f29cbb', 'Normalize for thumbnails - NEW, SERVICE');
+INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeThumServTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '26309e7d-6435-4700-9171-131005f29cbb', 'Normalize for thumbnails');
 
 -- Normalize Preservation & Access Chain
 -- Add Preservation in P&A
@@ -88,14 +88,14 @@ UPDATE MicroServiceChainLinks SET currentTask = @normalizeThumServTC WHERE pk='2
 -- Normalize Service Files for Access Chain
 -- Add Service Thumbnail normalization
 INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('62f21582-3925-47f6-b17e-90f46323b0d1', 0, 'normalize_v1.0', 'thumbnail "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "service"', 'objects/service');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES ('7fd4e564-bed2-42c7-a186-7ae615381516', 'a6b1c323-7d36-428e-846a-e7e819423577', '62f21582-3925-47f6-b17e-90f46323b0d1', 'Normalize service files for thumbnails - NEW, SERVICE');
+INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES ('7fd4e564-bed2-42c7-a186-7ae615381516', 'a6b1c323-7d36-428e-846a-e7e819423577', '62f21582-3925-47f6-b17e-90f46323b0d1', 'Normalize service files for thumbnails');
 INSERT INTO MicroServiceChainLinks(pk, microserviceGroup, defaultExitMessage, currentTask, defaultNextChainLink) VALUES ('e950cd98-574b-4e57-9ef8-c2231e1ce451', 'Normalize', 'Failed', '7fd4e564-bed2-42c7-a186-7ae615381516', '5c0d8661-1c49-4023-8a67-4991365d70fb');
 INSERT INTO MicroServiceChainLinksExitCodes (pk, microServiceChainLink, exitCode, nextMicroServiceChainLink, exitMessage) VALUES ('fe27318c-9ee1-470f-a9ce-0f8103cc78a5', 'e950cd98-574b-4e57-9ef8-c2231e1ce451', 0, '5c0d8661-1c49-4023-8a67-4991365d70fb', 'Completed successfully');
 UPDATE MicroServiceChainLinksExitCodes SET nextMicroServiceChainLink='e950cd98-574b-4e57-9ef8-c2231e1ce451' WHERE microServiceChainLink='f3a39155-d655-4336-8227-f8c88e4b7669';
 UPDATE MicroServiceChainLinks SET defaultNextChainLink='e950cd98-574b-4e57-9ef8-c2231e1ce451' WHERE pk='f3a39155-d655-4336-8227-f8c88e4b7669';
 -- Updated to use Service Access Norm
 INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('339f300d-62d1-4a46-97c2-57244f54d32e', 0, 'normalize_v1.0', 'access "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "service"', 'objects/service');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES ('246c34b0-b785-485f-971b-0ed9f82e1ae3', 'a6b1c323-7d36-428e-846a-e7e819423577', '339f300d-62d1-4a46-97c2-57244f54d32e', 'Normalize service files for access - NEW, SERVICE');
+INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES ('246c34b0-b785-485f-971b-0ed9f82e1ae3', 'a6b1c323-7d36-428e-846a-e7e819423577', '339f300d-62d1-4a46-97c2-57244f54d32e', 'Normalize service files for access');
 UPDATE MicroServiceChainLinks SET currentTask='246c34b0-b785-485f-971b-0ed9f82e1ae3' WHERE pk='5c0d8661-1c49-4023-8a67-4991365d70fb';
 
 -- Submission documentation
@@ -103,10 +103,10 @@ SET @normalizeThumSubDocTC = 'd3d0e81b-7cfd-4bf7-b8e3-976468c3d6fd' COLLATE utf8
 SET @normalizePresSubDocTC = '66af78b5-f756-46aa-90af-6215088cf2e0' COLLATE utf8_unicode_ci;
 -- Submission Documentation, preservation
 INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('c097d320-3422-4b72-8691-7ff1b67ca176', 0, 'normalize_v1.0', 'preservation "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "submissionDocumentation"', 'objects/submissionDocumentation');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizePresSubDocTC, 'a6b1c323-7d36-428e-846a-e7e819423577', 'c097d320-3422-4b72-8691-7ff1b67ca176', 'Normalize submission documentation for preservation - NEW, SUBDOC');
+INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizePresSubDocTC, 'a6b1c323-7d36-428e-846a-e7e819423577', 'c097d320-3422-4b72-8691-7ff1b67ca176', 'Normalize submission documentation for preservation');
 -- Submission Documentation, Thumbnails
 INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('57f2f1d2-7e02-40a3-a586-28e718074736', 0, 'normalize_v1.0', 'thumbnail "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "submissionDocumentation"', 'objects/submissionDocumentation');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeThumSubDocTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '57f2f1d2-7e02-40a3-a586-28e718074736', 'Normalize submission documentation for thumbnails - NEW, SUBDOC');
+INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeThumSubDocTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '57f2f1d2-7e02-40a3-a586-28e718074736', 'Normalize submission documentation for thumbnails');
 
 -- Update Submission Doc to point at new TC
 UPDATE MicroServiceChainLinks SET currentTask=@normalizeThumSubDocTC WHERE pk IN ('634918c4-1f06-4f62-9ed2-a3383aa2e962', '8c425901-13c7-4ea2-8955-2abdbaa3d67a');
