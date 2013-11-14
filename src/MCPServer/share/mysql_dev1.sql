@@ -174,5 +174,17 @@ SET @d3 = '6b94ce09-b8dc-4e43-9d9d-b20e5a21aeb6' COLLATE utf8_unicode_ci;
 DELETE FROM MicroServiceChainLinksExitCodes WHERE microServiceChainLink IN (@d1, @d2, @d3);
 DELETE FROM MicroServiceChainLinks WHERE pk IN (@d1, @d2, @d3);
 
+-- Update Maildir to use new mechanism for filterSubDir in normalization
+UPDATE TasksConfigsSetUnitVariable SET variable = 'normalize_v1.0', variableValue="{'filterSubDir':'objects/attachments'}" WHERE pk='f226ecea-ae91-42d5-b039-39a1125b1c30';
+
+-- Update Ingest file identification to use new filterSubDir for Maildir
+UPDATE TasksConfigsSetUnitVariable SET variable = 'identifyFileFormat_v0.0', variableValue="{'filterSubDir':'objects/attachments'}", microServiceChainLink = NULL WHERE pk='42454e81-e776-44cc-ae9f-b40e7e5c7738';
+UPDATE MicroServiceChainLinksExitCodes SET nextMicroServiceChainLink='2dd53959-8106-457d-a385-fee57fc93aa9' WHERE microServiceChainLink='7a024896-c4f7-4808-a240-44c87c762bc5';
+UPDATE MicroServiceChainLinks SET defaultNextChainLink='2dd53959-8106-457d-a385-fee57fc93aa9' WHERE pk='7a024896-c4f7-4808-a240-44c87c762bc5';
+DELETE FROM MicroServiceChainLinksExitCodes WHERE microServiceChainLink IN ('24d9ff02-a29b-48b2-a68e-cebd30fe3851', 'd9493000-4bb7-4c43-851f-73e57d1b69e9');
+DELETE FROM MicroServiceChainLinks WHERE pk IN ('24d9ff02-a29b-48b2-a68e-cebd30fe3851', 'd9493000-4bb7-4c43-851f-73e57d1b69e9');
+DELETE FROM TasksConfigs WHERE pk='75377725-8759-4cf7-9f83-700b96f72ac4';
+DELETE FROM TasksConfigsUnitVariableLinkPull WHERE variable='fileIDcommand-ingest';
+
 
 -- /Issue 5955

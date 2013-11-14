@@ -39,7 +39,7 @@ def getNormalizationReportQuery(sipUUID, idsRestriction=""):
     # not fetching name of ID Tool, don't think we need it.
     
     sql = """
-    select 
+    SELECT
         CONCAT(a.currentLocation, ' ', a.fileUUID,' ', IFNULL(a.fileID, "")) AS 'pagingIndex',
         a.fileUUID, 
         a.location,
@@ -56,8 +56,8 @@ def getNormalizationReportQuery(sipUUID, idsRestriction=""):
         c.taskUUID as preservation_normalization_task_uuid,
         b.exitCode as access_task_exitCode,
         c.exitCode as preservation_task_exitCode
-    from (
-        select
+    FROM (
+        SELECT
             f.fileUUID,
             f.sipUUID, 
             f.originalLocation as location,
@@ -67,44 +67,44 @@ def getNormalizationReportQuery(sipUUID, idsRestriction=""):
             f.fileGrpUse,
             fid.access_format AS 'already_in_access_format', 
             fid.preservation_format AS 'already_in_preservation_format'
-        from 
+        FROM
             Files f
-            Left Join
+            LEFT JOIN
             FilesIdentifiedIDs fii on f.fileUUID = fii.fileUUID
-            Left Join
+            LEFT JOIN
             fpr_formatversion fid on fii.fileID = fid.uuid
-        where 
+        WHERE
             f.fileGrpUse in ('original', 'service')
         ) a 
-        Left Join (
-        select
+        JOIN (
+        SELECT
             j.sipUUID,
             t.fileUUID,
             t.taskUUID,
             t.exitcode
-        from 
+        FROM
             Jobs j 
-            Join
+            JOIN
             Tasks t on t.jobUUID = j.jobUUID
-        where
+        WHERE
             j.jobType = 'Normalize for preservation'
         ) b
-        on a.fileUUID = b.fileUUID and a.sipUUID = b.sipUUID
-        Left Join (
-        select
+        ON a.fileUUID = b.fileUUID AND a.sipUUID = b.sipUUID
+        JOIN (
+        SELECT
             j.sipUUID,
             t.fileUUID,
             t.taskUUID,
             t.exitcode
-        from 
+        FROM
             Jobs j 
-            join
+            JOIN
             Tasks t on t.jobUUID = j.jobUUID
-        Where
+        WHERE
             j.jobType = 'Normalize for access'
         ) c
-        on a.fileUUID = c.fileUUID and a.sipUUID = c.sipUUID
-        where a.sipUUID = '{0}';
+        ON a.fileUUID = c.fileUUID AND a.sipUUID = c.sipUUID
+        WHERE a.sipUUID = '{0}';
     """.format(sipUUID)
     
     cursor.execute(sql)
