@@ -87,7 +87,7 @@ def getNormalizationReportQuery(sipUUID, idsRestriction=""):
             JOIN
             Tasks t on t.jobUUID = j.jobUUID
         WHERE
-            j.jobType = 'Normalize for preservation'
+            j.jobType = 'Normalize for access'
         ) b
         ON a.fileUUID = b.fileUUID AND a.sipUUID = b.sipUUID
         JOIN (
@@ -101,7 +101,7 @@ def getNormalizationReportQuery(sipUUID, idsRestriction=""):
             JOIN
             Tasks t on t.jobUUID = j.jobUUID
         WHERE
-            j.jobType = 'Normalize for access'
+            j.jobType = 'Normalize for preservation'
         ) c
         ON a.fileUUID = c.fileUUID AND a.sipUUID = c.sipUUID
         WHERE a.sipUUID = '{0}';
