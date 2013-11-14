@@ -42,8 +42,11 @@ import databaseInterface
 from executeOrRunSubProcess import executeOrRun
 
 def _transfer_storage_path(uuid):
-    transfer = models.Transfer.objects.get(uuid=uuid)
-    return transfer.currentlocation
+    try:
+        transfer = models.Transfer.objects.get(uuid=uuid)
+        return transfer.currentlocation
+    except ObjectDoesNotExist:
+        return None
 
 def _transfer_storage_path_root():
     return os.path.join(
@@ -507,13 +510,19 @@ def transfer_files(request, uuid):
 
     if request.method == 'GET':
         transfer_path = _transfer_storage_path(uuid)
-        if os.path.exists(transfer_path):
-            return helpers.json_response(os.listdir(transfer_path))
-        else:
+        if transfer_path == None:
             error = {
-                'summary': 'This transfer path does not exist.',
+                'summary': 'This transfer does not exist.',
                 'status': 404
             }
+        else:
+            if os.path.exists(transfer_path):
+                return helpers.json_response(os.listdir(transfer_path))
+            else:
+                error = {
+                    'summary': 'This transfer path does not exist.',
+                    'status': 404
+                }
     elif request.method == 'PUT':
         # replace a file in the transfer
         return _handle_upload_request(request, uuid, True)
@@ -557,7 +566,7 @@ def transfer_files(request, uuid):
             'status': 405
         }
 
-    if error != none:
+    if error != None:
                 return _sword_error_response(request, error)
 
 """
@@ -622,5 +631,5 @@ def transfer_state(request, uuid):
             'status': 405
         }
 
-    if error != none:
+    if error != None:
                 return _sword_error_response(request, error)
