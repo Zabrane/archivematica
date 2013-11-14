@@ -25,6 +25,11 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'settings.common'
 from fpr.models import FPRule
 from main.models import FileFormatVersion, File
 
+# Return codes
+SUCCESS = 0
+RULE_FAILED = 1
+NO_RULE_FOUND = 2
+
 def get_replacement_dict(opts):
     """ Generates values for all knows %var% replacement variables. """
     prefix = ""
@@ -217,26 +222,26 @@ def main(opts):
     try:
         file_ = File.objects.get(uuid=opts.file_uuid)
     except File.DoesNotExist:
-        print('File with uuid', opts.file_uuid, 'does not exist.', file=sys.stderr)
-        return -1
+        print('File with uuid', opts.file_uuid, 'does not exist in database.', file=sys.stderr)
+        return NO_RULE_FOUND
     print('File found:', file_.uuid, file_.currentlocation)
 
     # Unless normalization file group use is submissionDocumentation, skip the
     # submissionDocumentation directory
     if opts.normalize_file_grp_use != "submissionDocumentation" and file_.currentlocation.startswith('%SIPDirectory%objects/submissionDocumentation'):
         print('File', os.path.basename(opts.file_path), 'in objects/submissionDocumentation, skipping')
-        return 0
+        return SUCCESS
 
     # Only normalize files where the file's group use and normalize group use match
     if file_.filegrpuse != opts.normalize_file_grp_use:
         print(os.path.basename(opts.file_path), 'is file group usage', file_.filegrpuse, 'instead of ', opts.normalize_file_grp_use, ' - skipping')
-        return 0
+        return SUCCESS
 
     # If a file has been manually normalized for this purpose, skip it
     manually_normalized_file = check_manual_normalization(opts)
     if manually_normalized_file:
         print(os.path.basename(opts.file_path), 'was already manually normalized into', manually_normalized_file)
-        return 0
+        return SUCCESS
 
     try:
         format_id = FileFormatVersion.objects.get(file_uuid=opts.file_uuid)
@@ -246,13 +251,13 @@ def main(opts):
             os.path.basename(file_.currentlocation),
             ' - file format not identified',
             file=sys.stderr)
-        return -1
+        return NO_RULE_FOUND
     if format_id.format_version == None:
         print('Not normalizing',
             os.path.basename(file_.currentlocation),
             ' - file format not identified',
             file=sys.stderr)
-        return -1
+        return NO_RULE_FOUND
     print('File format:', format_id.format_version)
 
     # Look up the normalization command in the FPR
@@ -268,7 +273,7 @@ def main(opts):
             print('Not normalizing', os.path.basename(file_.currentlocation),
                 ' - No rule or default rule found to normalize for', opts.purpose,
                 file=sys.stderr)
-            return -1
+            return NO_RULE_FOUND
     print('Format Policy Rule:', rule)
     command = rule.command
     print('Format Policy Command', command.description)
@@ -310,12 +315,11 @@ def main(opts):
         shutil.copyfile(thumbnail_filepath, thumbnail_storage_file)
 
     if not exitstatus == 0:
-        # Dang, looks like the normalization failed
         print('Command', command.description, 'failed!', file=sys.stderr)
-        return 1
+        return RULE_FAILED
     else:
         print('Successfully normalized ', os.path.basename(opts.file_path), 'for', opts.purpose)
-        return 0
+        return SUCCESS
 
 
 if __name__ == '__main__':

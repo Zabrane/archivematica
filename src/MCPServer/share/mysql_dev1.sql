@@ -112,6 +112,16 @@ INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES
 UPDATE MicroServiceChainLinks SET currentTask=@normalizeThumSubDocTC WHERE pk IN ('634918c4-1f06-4f62-9ed2-a3383aa2e962', '8c425901-13c7-4ea2-8955-2abdbaa3d67a');
 UPDATE MicroServiceChainLinks SET currentTask=@normalizePresSubDocTC WHERE pk IN ('a697cfaa-208b-4479-b737-d8008aa9e037', 'bf7cfca8-f8b9-45d7-bd6a-b6ab9fd381bc');
 
+-- Add extra MicroServiceChainLinksExitCodes for exit code 1 and 2 as success
+INSERT INTO MicroServiceChainLinksExitCodes (pk, microServiceChainLink, exitCode, nextMicroServiceChainLink) 
+    SELECT UUID(), microServiceChainLink, 1, nextMicroServiceChainLink 
+    FROM MicroServiceChainLinksExitCodes
+    WHERE exitCode = 0 AND microServiceChainLink IN (SELECT M.pk FROM MicroServiceChainLinks M JOIN TasksConfigs C ON currentTask = C.pk JOIN StandardTasksConfigs S ON taskTypePKReference = S.pk WHERE execute ='normalize_v1.0');
+INSERT INTO MicroServiceChainLinksExitCodes (pk, microServiceChainLink, exitCode, nextMicroServiceChainLink) 
+    SELECT UUID(), microServiceChainLink, 2, nextMicroServiceChainLink 
+    FROM MicroServiceChainLinksExitCodes
+    WHERE exitCode = 0 AND microServiceChainLink IN (SELECT M.pk FROM MicroServiceChainLinks M JOIN TasksConfigs C ON currentTask = C.pk JOIN StandardTasksConfigs S ON taskTypePKReference = S.pk WHERE execute ='normalize_v1.0');
+
 -- Remove old normalization chains
 -- This table will no longer be used
 DROP TABLE TasksConfigsStartLinkForEachFile;
