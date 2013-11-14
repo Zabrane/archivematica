@@ -256,25 +256,28 @@ def set_setting(setting, value=''):
     setting_data.value = value
     setting_data.save()
 
-def get_client_config_value(field):
-    clientConfigFilePath = '/etc/archivematica/MCPClient/clientConfig.conf'
+def get_config_value(config_file, config_section, field):
     config = ConfigParser.SafeConfigParser()
-    config.read(clientConfigFilePath)
+    config.read(config_file)
 
     try:
-        return config.get('MCPClient', field)
+        return config.get(config_section, field)
     except:
         return ''
+
+def get_client_config_value(field):
+    return get_config_value(
+        '/etc/archivematica/MCPClient/clientConfig.conf',
+        'MCPClient',
+        field
+    )
 
 def get_server_config_value(field):
-    clientConfigFilePath = '/etc/archivematica/MCPServer/serverConfig.conf'
-    config = ConfigParser.SafeConfigParser()
-    config.read(clientConfigFilePath)
-
-    try:
-        return config.get('MCPServer', field)
-    except:
-        return ''
+    return get_config_value(
+        '/etc/archivematica/MCPServer/serverConfig.conf',
+        'MCPServer',
+        field
+    )
 
 def redirect_with_get_params(url_name, *args, **kwargs):
     url = reverse(url_name, args = args)
