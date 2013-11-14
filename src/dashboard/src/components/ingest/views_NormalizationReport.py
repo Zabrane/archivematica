@@ -104,7 +104,8 @@ def getNormalizationReportQuery(sipUUID, idsRestriction=""):
             j.jobType = 'Normalize for preservation'
         ) c
         ON a.fileUUID = c.fileUUID AND a.sipUUID = c.sipUUID
-        WHERE a.sipUUID = '{0}';
+        WHERE a.sipUUID = '{0}'
+        order by (access_normalization_failed + preservation_normalization_failed) desc;
     """.format(sipUUID)
     
     cursor.execute(sql)
