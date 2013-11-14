@@ -98,20 +98,6 @@ INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, fi
 INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES ('246c34b0-b785-485f-971b-0ed9f82e1ae3', 'a6b1c323-7d36-428e-846a-e7e819423577', '339f300d-62d1-4a46-97c2-57244f54d32e', 'Normalize service files for access');
 UPDATE MicroServiceChainLinks SET currentTask='246c34b0-b785-485f-971b-0ed9f82e1ae3' WHERE pk='5c0d8661-1c49-4023-8a67-4991365d70fb';
 
--- Submission documentation
-SET @normalizeThumSubDocTC = 'd3d0e81b-7cfd-4bf7-b8e3-976468c3d6fd' COLLATE utf8_unicode_ci;
-SET @normalizePresSubDocTC = '66af78b5-f756-46aa-90af-6215088cf2e0' COLLATE utf8_unicode_ci;
--- Submission Documentation, preservation
-INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('c097d320-3422-4b72-8691-7ff1b67ca176', 0, 'normalize_v1.0', 'preservation "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "submissionDocumentation"', 'objects/submissionDocumentation');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizePresSubDocTC, 'a6b1c323-7d36-428e-846a-e7e819423577', 'c097d320-3422-4b72-8691-7ff1b67ca176', 'Normalize submission documentation for preservation');
--- Submission Documentation, Thumbnails
-INSERT INTO StandardTasksConfigs (pk, requiresOutputLock, execute, arguments, filterSubDir) VALUES ('57f2f1d2-7e02-40a3-a586-28e718074736', 0, 'normalize_v1.0', 'thumbnail "%fileUUID%" "%relativeLocation%" "%SIPDirectory%" "%SIPUUID%" "%taskUUID%" "submissionDocumentation"', 'objects/submissionDocumentation');
-INSERT INTO TasksConfigs (pk, taskType, taskTypePKReference, description) VALUES (@normalizeThumSubDocTC, 'a6b1c323-7d36-428e-846a-e7e819423577', '57f2f1d2-7e02-40a3-a586-28e718074736', 'Normalize submission documentation for thumbnails');
-
--- Update Submission Doc to point at new TC
-UPDATE MicroServiceChainLinks SET currentTask=@normalizeThumSubDocTC WHERE pk IN ('634918c4-1f06-4f62-9ed2-a3383aa2e962', '8c425901-13c7-4ea2-8955-2abdbaa3d67a');
-UPDATE MicroServiceChainLinks SET currentTask=@normalizePresSubDocTC WHERE pk IN ('a697cfaa-208b-4479-b737-d8008aa9e037', 'bf7cfca8-f8b9-45d7-bd6a-b6ab9fd381bc');
-
 -- Add extra MicroServiceChainLinksExitCodes for exit code 1 and 2 as success
 INSERT INTO MicroServiceChainLinksExitCodes (pk, microServiceChainLink, exitCode, nextMicroServiceChainLink) 
     SELECT UUID(), microServiceChainLink, 1, nextMicroServiceChainLink 
@@ -121,6 +107,14 @@ INSERT INTO MicroServiceChainLinksExitCodes (pk, microServiceChainLink, exitCode
     SELECT UUID(), microServiceChainLink, 2, nextMicroServiceChainLink 
     FROM MicroServiceChainLinksExitCodes
     WHERE exitCode = 0 AND microServiceChainLink IN (SELECT M.pk FROM MicroServiceChainLinks M JOIN TasksConfigs C ON currentTask = C.pk JOIN StandardTasksConfigs S ON taskTypePKReference = S.pk WHERE execute ='normalize_v1.0');
+
+-- Remove normalization of submission documentation from workflow
+UPDATE MicroServiceChainLinks SET defaultNextChainLink = '76d87f57-9718-4f68-82e6-91174674c49c' WHERE pk='4ef35d72-9494-431a-8cdb-8527b42664c7';
+UPDATE MicroServiceChainLinksExitCodes SET nextMicroServiceChainLink = '76d87f57-9718-4f68-82e6-91174674c49c' WHERE microServiceChainLink='4ef35d72-9494-431a-8cdb-8527b42664c7';
+UPDATE MicroServiceChainLinks SET defaultNextChainLink='576f1f43-a130-4c15-abeb-c272ec458d33' WHERE pk='33d7ac55-291c-43ae-bb42-f599ef428325';
+UPDATE MicroServiceChainLinksExitCodes SET nextMicroServiceChainLink='576f1f43-a130-4c15-abeb-c272ec458d33' WHERE microServiceChainLink='33d7ac55-291c-43ae-bb42-f599ef428325';
+DELETE FROM MicroServiceChainLinksExitCodes WHERE microServiceChainLink IN ('634918c4-1f06-4f62-9ed2-a3383aa2e962', '8c425901-13c7-4ea2-8955-2abdbaa3d67a', 'a697cfaa-208b-4479-b737-d8008aa9e037', 'bf7cfca8-f8b9-45d7-bd6a-b6ab9fd381bc');
+DELETE FROM MicroServiceChainLinks WHERE pk IN ('634918c4-1f06-4f62-9ed2-a3383aa2e962', '8c425901-13c7-4ea2-8955-2abdbaa3d67a', 'a697cfaa-208b-4479-b737-d8008aa9e037', 'bf7cfca8-f8b9-45d7-bd6a-b6ab9fd381bc');
 
 -- Remove old normalization chains
 -- This table will no longer be used
@@ -172,4 +166,13 @@ DELETE FROM TaskTypes WHERE pk IN (@splitTT, @splitFileIdTT, @transcodeTT);
 
 -- Fix group on METS gen
 UPDATE MicroServiceChainLinks SET microserviceGroup = "Prepare AIP" WHERE pk IN ('ccf8ec5c-3a9a-404a-a7e7-8f567d3b36a0', '65240550-d745-4afe-848f-2bf5910457c9');
+
+-- Delete unused links
+SET @d1 = '0518e0d7-46de-4311-a669-b79b8ece40b9' COLLATE utf8_unicode_ci;
+SET @d2 = 'b7596af9-12e1-4e7d-8272-39b69273abaa' COLLATE utf8_unicode_ci;
+SET @d3 = '6b94ce09-b8dc-4e43-9d9d-b20e5a21aeb6' COLLATE utf8_unicode_ci;
+DELETE FROM MicroServiceChainLinksExitCodes WHERE microServiceChainLink IN (@d1, @d2, @d3);
+DELETE FROM MicroServiceChainLinks WHERE pk IN (@d1, @d2, @d3);
+
+
 -- /Issue 5955
