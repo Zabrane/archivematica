@@ -168,7 +168,7 @@ DELETE FROM MicroServiceChains WHERE startingLink IN (SELECT pk FROM MicroServic
 DELETE FROM MicroServiceChainLinks WHERE currentTask IN (SELECT pk FROM TasksConfigs WHERE taskType=@splitFileIdTT);
 DELETE FROM StandardTasksConfigs WHERE pk IN (SELECT taskTypePKReference FROM TasksConfigs WHERE taskType=@splitFileIdTT);
 DELETE FROM TasksConfigs WHERE taskType=@splitFileIdTT;
-
+DELETE FROM TaskTypes WHERE pk IN (@splitTT, @splitFileIdTT, @transcodeTT);
 
 -- Fix group on METS gen
 UPDATE MicroServiceChainLinks SET microserviceGroup = "Prepare AIP" WHERE pk IN ('ccf8ec5c-3a9a-404a-a7e7-8f567d3b36a0', '65240550-d745-4afe-848f-2bf5910457c9');
