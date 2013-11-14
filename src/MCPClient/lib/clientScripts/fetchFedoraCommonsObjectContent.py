@@ -34,9 +34,11 @@ def _filename_from_response(response):
     else:
         return None
 
-def _parse_filename_from_content_disposition(content_disposition):
-    filename_start = content_disposition.index('filename="') + 10
-    return content_disposition[filename_start:-1]
+def _parse_filename_from_content_disposition(header):
+    filename = header.split('filename=')[1]
+    if filename[0] == '"' or filename[0] == "'":
+        filename = filename[1:-1]
+    return filename
 
 def download_resource(url, destination_path):
     response = urllib2.urlopen(url)

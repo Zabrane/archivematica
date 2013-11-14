@@ -132,16 +132,18 @@ def _handle_upload_request_with_potential_md5_checksum(request, file_path, succe
         os.remove(temp_filepath)
         return HttpResponse(status=success_status_code)
 
+def _parse_filename_from_content_disposition(header):
+    filename = header.split('filename=')[1]
+    if filename[0] == '"' or filename[0] == "'":
+            filename = filename[1:-1]
+    return filename
+
 def _handle_upload_request(request, uuid, replace_file=False):
     error = None
     bad_request = None
 
     if 'HTTP_CONTENT_DISPOSITION' in request.META:
-        filename = request.META['HTTP_CONTENT_DISPOSITION']
-
-        # TODO: fix temporary hack
-        # TODO: handle malformed header
-        filename = filename.replace('attachment; filename=', '')
+        filename = _parse_filename_from_content_disposition(request.META['HTTP_CONTENT_DISPOSITION']) 
 
         if filename != '':
             file_path = os.path.join(_transfer_storage_path(uuid), filename)
@@ -345,7 +347,7 @@ def transfer_collection(request):
                         if transfer_uuid != None:
                             # TODO: parse XML and start fetching jobs if needed
                             mock_object_content_urls = [
-                                'http://192.168.1.231:8080/fedora/objects/hat:man/datastreams/rickpic/content',
+                                'http://192.168.1.77:8080/fedora/objects/people:rick/datastreams/rick_pic/content',
                                 'http://upload.wikimedia.org/wikipedia/commons/e/e8/Mute_swan.jpg'
                             ]
 
