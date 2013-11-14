@@ -193,10 +193,6 @@ def _fetch_content(transfer_uuid, object_content_urls):
     # write resources to temp file
     temp_dir = tempfile.mkdtemp()
     os.chmod(temp_dir, 02770) # drwxrws---
-    resource_list_filename = os.path.join(temp_dir, 'resource_list.txt')
-    with open(resource_list_filename, 'w') as resource_list_file:
-        for url in object_content_urls:
-            resource_list_file.write(url + "\n")
 
     # create job record to associate tasks with the transfer
     now = datetime.datetime.now()
@@ -209,37 +205,38 @@ def _fetch_content(transfer_uuid, object_content_urls):
     job.hidden = True
     job.save()
 
-    # create task record so progress can be tracked
-    task_uuid = uuid.uuid4().__str__()
-    arguments = '"' + resource_list_filename + '" "' + _transfer_storage_path(transfer_uuid) + '"'
+    for resource_url in object_content_urls:
+        # create task record so progress can be tracked
+        task_uuid = uuid.uuid4().__str__()
+        arguments = '"' + resource_url + '" "' + _transfer_storage_path(transfer_uuid) + '"'
 
-    # create task record so time can be tracked by the MCP client
-    # ...Django doesn't like putting 0 in datetime fields
-    # TODO: put in arguments, etc. and use proper sanitization
-    sql = "INSERT INTO Tasks (taskUUID, jobUUID, startTime) VALUES ('" + task_uuid + "', '" + job_uuid + "', 0)"
-    databaseInterface.runSQL(sql)
-    _flush_transaction() # refresh ORM after manual SQL
+        # create task record so time can be tracked by the MCP client
+        # ...Django doesn't like putting 0 in datetime fields
+        # TODO: put in arguments, etc. and use proper sanitization
+        sql = "INSERT INTO Tasks (taskUUID, jobUUID, startTime) VALUES ('" + task_uuid + "', '" + job_uuid + "', 0)"
+        databaseInterface.runSQL(sql)
+        _flush_transaction() # refresh ORM after manual SQL
 
-    command = '/usr/lib/archivematica/MCPClient/clientScripts/fetchFedoraCommonsObjectContent.py ' + arguments
-    exitCode, stdOut, stdError = executeOrRun("command", command)
+        command = '/usr/lib/archivematica/MCPClient/clientScripts/fetchFedoraCommonsObjectContent.py ' + arguments
+        exitCode, stdOut, stdError = executeOrRun("command", command)
 
-    """
-    # submit job to gearman
-    gm_client = gearman.GearmanClient(['localhost:4730'])
-    data = {'createdDate' : datetime.datetime.now().__str__()}
-    data['arguments'] = arguments
-    result = gm_client.submit_job(
-        'fetchfedoracommonsobjectcontent_v0.0',
-        cPickle.dumps(data),
-        task_uuid
-    )
-    """
+        """
+        # submit job to gearman
+        gm_client = gearman.GearmanClient(['localhost:4730'])
+        data = {'createdDate' : datetime.datetime.now().__str__()}
+        data['arguments'] = arguments
+        result = gm_client.submit_job(
+            'fetchfedoracommonsobjectcontent_v0.0',
+            cPickle.dumps(data),
+            task_uuid
+        )
+        """
 
-    # record task completion time
-    task = models.Task.objects.get(taskuuid=task_uuid)
-    task.exitcode = exitCode
-    task.endtime = datetime.datetime.now().__str__() # TODO: endtime seems weird... Django time zone issue?
-    task.save()
+        # record task completion time
+        task = models.Task.objects.get(taskuuid=task_uuid)
+        task.exitcode = exitCode
+        task.endtime = datetime.datetime.now().__str__() # TODO: endtime seems weird... Django time zone issue?
+        task.save()
 
     # delete temp dir
     shutil.rmtree(temp_dir)
@@ -348,7 +345,8 @@ def transfer_collection(request):
                         if transfer_uuid != None:
                             # TODO: parse XML and start fetching jobs if needed
                             mock_object_content_urls = [
-                                'http://192.168.1.74:8080/fedora/objects/people:rick/datastreams/rick_pic/content'
+                                'http://192.168.1.231:8080/fedora/objects/hat:man/datastreams/rickpic/content',
+                                'http://upload.wikimedia.org/wikipedia/commons/e/e8/Mute_swan.jpg'
                             ]
 
                             # create thread so content URLs can be downloaded asynchronously

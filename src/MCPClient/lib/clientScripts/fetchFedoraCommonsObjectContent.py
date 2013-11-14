@@ -27,49 +27,45 @@ import sys
 import urllib2
 import tempfile
 
-def download_resources_listed_in_file(file_containing_urls, destination_directory):
-    download_counter = 1
-    temp_dir = tempfile.mkdtemp()
-
-    # download each resource in file containing URLs
-    urls = open(file_containing_urls)
-
-    for url in urls:
-        # down resource to a temporary file
-        temp_filepath = os.path.join(temp_dir, str(download_counter))
-        response = download_resource(url, temp_filepath)
-
-        # move to destination_directory
-        destination_filepath = os.path.join(destination_directory, _filename_from_response(response))
-        shutil.move(temp_filepath, destination_filepath)
-        download_counter += 1
-    urls.close()
-
-    # cleanup
-    os.rmdir(temp_dir)
-
 def _filename_from_response(response):
     info = response.info()
-    return _parse_filename_from_content_disposition(info['content-disposition'])
+    if 'content-disposition' in info:
+        return _parse_filename_from_content_disposition(info['content-disposition'])
+    else:
+        return None
 
 def _parse_filename_from_content_disposition(content_disposition):
     filename_start = content_disposition.index('filename="') + 10
     return content_disposition[filename_start:-1]
 
-def download_resource(url, filepath):
-    request = urllib2.urlopen(url)
+def download_resource(url, destination_path):
+    response = urllib2.urlopen(url)
+    filename = _filename_from_response(response)
+
+    if filename == None:
+        filename = os.path.basename(url)
+
+    filepath = os.path.join(destination_path, filename)
     buffer = 16 * 1024
     with open(filepath, 'wb') as fp:
         while True:
-            chunk = request.read(buffer)
+            chunk = response.read(buffer)
             if not chunk: break
             fp.write(chunk)
-    return request
+    return filename
 
 if __name__ == '__main__':
-    print 'Downloading started.'
-    file_containing_urls = sys.argv[1]
-    destination_directory = sys.argv[2]
+    if len(sys.argv) <> 3:
+        print 'Usage: ' + sys.argv[0] + ' <resource URL> <destination directory>'
+        exit(1)
 
-    download_resources_listed_in_file(file_containing_urls, destination_directory)
+    print 'Downloading started.'
+
+    resource_url = sys.argv[1]
+    destination_path = sys.argv[2]
+
+    temp_dir = tempfile.mkdtemp()
+    filename = download_resource(resource_url, temp_dir)
+    shutil.move(os.path.join(temp_dir, filename), os.path.join(destination_path, filename))
+
     print 'Downloading complete.'
