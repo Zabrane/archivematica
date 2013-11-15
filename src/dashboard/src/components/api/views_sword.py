@@ -361,9 +361,9 @@ def transfer_collection(request):
                                 'summary': 'Could not create transfer: contact an administrator.',
                                 'status': 500
                         }
-                    except etree.XMLSyntaxError:
+                    except etree.XMLSyntaxError as e:
                         error = {
-                            'summary': 'Error parsing XML.',
+                            'summary': 'Error parsing XML (' + str(e) + ').',
                             'status': 412
                         }
                 except Exception as e:
