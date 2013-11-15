@@ -294,7 +294,7 @@ Example GET of transfers list:
 
 Example POST creation of transfer:
 
-  curl -v -H "In-Progress: true" -d @mets.xml --request POST http://localhost/api/v2/transfer/sword
+  curl -v -H "In-Progress: true" --data-binary @mets.xml --request POST http://localhost/api/v2/transfer/sword
 """
 # TODO: add authentication
 # TODO: error is transfer completed, but has no files?
@@ -334,7 +334,7 @@ def transfer_collection(request):
                     try:
                         tree = etree.parse(temp_filepath)
                         root = tree.getroot()
-                        transfer_name = root.find("{http://www.w3.org/2005/Atom}title").text
+                        transfer_name = root.get('LABEL')
 
                         # assemble transfer specification
                         transfer_specification = {}
