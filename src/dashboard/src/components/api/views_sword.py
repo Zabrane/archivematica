@@ -345,14 +345,16 @@ def transfer_collection(request):
                         transfer_uuid = _create_transfer_directory_and_db_entry(transfer_specification)
 
                         if transfer_uuid != None:
-                            # TODO: parse XML and start fetching jobs if needed
-                            mock_object_content_urls = [
-                                'http://192.168.1.77:8080/fedora/objects/people:rick/datastreams/rick_pic/content',
-                                'http://upload.wikimedia.org/wikipedia/commons/e/e8/Mute_swan.jpg'
-                            ]
+                            # parse XML for content URLs
+                            object_content_urls = []
+
+                            elements = root.iterfind("{http://www.loc.gov/METS/}fileSec/{http://www.loc.gov/METS/}fileGrp[@ID='DATASTREAMS']/{http://www.loc.gov/METS/}fileGrp[@ID='OBJ']/{http://www.loc.gov/METS/}file/{http://www.loc.gov/METS/}FLocat")
+
+                            for element in elements:
+                                object_content_urls.append(element.get('{http://www.w3.org/1999/xlink}href'))
 
                             # create thread so content URLs can be downloaded asynchronously
-                            thread = threading.Thread(target=_fetch_content, args=(transfer_uuid, mock_object_content_urls))
+                            thread = threading.Thread(target=_fetch_content, args=(transfer_uuid, object_content_urls))
                             thread.start()
 
                             return _deposit_receipt_response(request, transfer_uuid, 201)
