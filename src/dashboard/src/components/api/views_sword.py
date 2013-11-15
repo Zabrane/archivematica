@@ -118,7 +118,7 @@ def _handle_upload_request_with_potential_md5_checksum(request, file_path, succe
         md5sum = _get_file_md5_checksum(temp_filepath)
         if request.META['HTTP_CONTENT_MD5'] != md5sum:
             os.remove(temp_filepath)
-            bad_request = 'MD5 checksum of uploaded file (' + md5sum + ') does not match checksum provided in header (' + request.META['HTTP_CONTENT_MD5'] + ').'
+            bad_request = 'MD5 checksum of uploaded file ({uploaded_md5sum}) does not match checksum provided in header ({header_md5sum}).'.format(uploaded_md5sum=md5sum, header_md5sum=request.META['HTTP_CONTENT_MD5'])
             return _sword_error_response(request, {
                 'summary': bad_request,
                 'status': 400
@@ -210,12 +210,13 @@ def _fetch_content(transfer_uuid, object_content_urls):
     for resource_url in object_content_urls:
         # create task record so progress can be tracked
         task_uuid = uuid.uuid4().__str__()
-        arguments = '"' + resource_url + '" "' + _transfer_storage_path(transfer_uuid) + '"'
+        arguments = '"{resource_url}" "{transfer_path}"'.format(resource_url=resource_url, transfer_path=_transfer_storage_path(transfer_uuid))
 
         # create task record so time can be tracked by the MCP client
         # ...Django doesn't like putting 0 in datetime fields
         # TODO: put in arguments, etc. and use proper sanitization
-        sql = "INSERT INTO Tasks (taskUUID, jobUUID, startTime) VALUES ('" + task_uuid + "', '" + job_uuid + "', 0)"
+        sql = "INSERT INTO Tasks (taskUUID, jobUUID, startTime) VALUES ('%s', '%s', 0)" % (task_uuid, job_uuid)
+        #sql = "INSERT INTO Tasks (taskUUID, jobUUID, startTime) VALUES ('" + task_uuid + "', '" + job_uuid + "', 0)"
         databaseInterface.runSQL(sql)
         _flush_transaction() # refresh ORM after manual SQL
 
@@ -336,36 +337,40 @@ def transfer_collection(request):
                         root = tree.getroot()
                         transfer_name = root.get('LABEL')
 
-                        # assemble transfer specification
-                        transfer_specification = {}
-                        transfer_specification['name'] = transfer_name
-                        if 'HTTP_ON_BEHALF_OF' in request.META:
-                            transfer_specification['sourceofacquisition'] = request.META['HTTP_ON_BEHALF_OF']
-
-                        transfer_uuid = _create_transfer_directory_and_db_entry(transfer_specification)
-
-                        if transfer_uuid != None:
-                            # parse XML for content URLs
-                            object_content_urls = []
-
-                            elements = root.iterfind("{http://www.loc.gov/METS/}fileSec/{http://www.loc.gov/METS/}fileGrp[@ID='DATASTREAMS']/{http://www.loc.gov/METS/}fileGrp[@ID='OBJ']/{http://www.loc.gov/METS/}file/{http://www.loc.gov/METS/}FLocat")
-
-                            for element in elements:
-                                object_content_urls.append(element.get('{http://www.w3.org/1999/xlink}href'))
-
-                            # create thread so content URLs can be downloaded asynchronously
-                            thread = threading.Thread(target=_fetch_content, args=(transfer_uuid, object_content_urls))
-                            thread.start()
-
-                            return _deposit_receipt_response(request, transfer_uuid, 201)
+                        if transfer_name == None:
+                            bad_request = 'No transfer name found in XML.'
                         else:
-                            error = {
-                                'summary': 'Could not create transfer: contact an administrator.',
-                                'status': 500
-                        }
+                            # assemble transfer specification
+                            transfer_specification = {}
+                            transfer_specification['name'] = transfer_name
+                            if 'HTTP_ON_BEHALF_OF' in request.META:
+                                # TODO: should get this from author header
+                                transfer_specification['sourceofacquisition'] = request.META['HTTP_ON_BEHALF_OF']
+
+                            transfer_uuid = _create_transfer_directory_and_db_entry(transfer_specification)
+
+                            if transfer_uuid != None:
+                                # parse XML for content URLs
+                                object_content_urls = []
+
+                                elements = root.iterfind("{http://www.loc.gov/METS/}fileSec/{http://www.loc.gov/METS/}fileGrp[@ID='DATASTREAMS']/{http://www.loc.gov/METS/}fileGrp[@ID='OBJ']/{http://www.loc.gov/METS/}file/{http://www.loc.gov/METS/}FLocat")
+
+                                for element in elements:
+                                    object_content_urls.append(element.get('{http://www.w3.org/1999/xlink}href'))
+
+                                # create thread so content URLs can be downloaded asynchronously
+                                thread = threading.Thread(target=_fetch_content, args=(transfer_uuid, object_content_urls))
+                                thread.start()
+
+                                return _deposit_receipt_response(request, transfer_uuid, 201)
+                            else:
+                                error = {
+                                    'summary': 'Could not create transfer: contact an administrator.',
+                                    'status': 500
+                            }
                     except etree.XMLSyntaxError as e:
                         error = {
-                            'summary': 'Error parsing XML (' + str(e) + ').',
+                            'summary': 'Error parsing XML ({error_message}).'.format(error_message=str(e)),
                             'status': 412
                         }
                 except Exception as e:
