@@ -593,7 +593,7 @@
         );
       }
 
-      var toggledFolders = this.snapShotToggledFolders();
+      this.snapShotToggledFolders();
 
       this.dirView = new exports.DirectoryView({
         explorer: this,
