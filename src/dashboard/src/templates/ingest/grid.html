@@ -72,9 +72,10 @@
   <br />
 
   <script>
+  var browser;
   $(document).ready(function() {
 
-    var browser = setupBacklogBrowser(
+    browser = setupBacklogBrowser(
       '/var/archivematica/sharedDirectory/www/AIPsStore/transferBacklog/originals',
       '/var/archivematica/sharedDirectory/arrange'
     );
