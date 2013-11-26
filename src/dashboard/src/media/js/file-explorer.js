@@ -511,7 +511,7 @@
     snapShotToggledFolders: function() {
       this.toggled = [];
       var self = this;
-      $('.backbone-file-explorer-directory').each(function(index, value) {
+      $(this.el).find('.backbone-file-explorer-directory').each(function(index, value) {
         if (!$(value).next().is(':visible')) {
           self.toggled.push($(value).attr('id'));
         }
