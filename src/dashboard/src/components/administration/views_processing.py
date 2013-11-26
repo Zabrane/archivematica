@@ -91,6 +91,13 @@ def index(request):
             "action":     "Approve"
         },
         {
+            "name":       "manual_normalization_wait",
+            "label":      "Skip waiting to allow manual normalization metadata entry",
+            "applies_to": "Add manual normalization metadata?",
+            "yes_option": "Metadata entered",
+            "action":     "Metadata entered",
+        },
+        {
             "name":       "store_aip",
             "label":      "Store AIP",
             "yes_option": "Store AIP",

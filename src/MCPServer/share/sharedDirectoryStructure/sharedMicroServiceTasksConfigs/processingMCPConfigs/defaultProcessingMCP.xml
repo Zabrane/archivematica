@@ -5,6 +5,10 @@
       <goToChain>Skip quarantine</goToChain>
     </preconfiguredChoice>
     <preconfiguredChoice>
+      <appliesTo>Add manual normalization metadata?</appliesTo>
+      <goToChain>Metadata entered</goToChain>
+    </preconfiguredChoice>
+    <preconfiguredChoice>
       <appliesTo>Remove from quarantine</appliesTo>
       <goToChain>Unquarantine</goToChain>
       <delay unitCtime="yes">2419200.0</delay>
