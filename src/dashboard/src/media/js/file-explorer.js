@@ -301,7 +301,14 @@
             var entryEl = entryView.render().el
               , isOpenDir = false;
 
+            // open the directory if the file explorer has been invoked with this directory
+            // expressly open
             if (this.explorer.openDirs && this.explorer.openDirs.indexOf(entryView.cssId()) != -1) {
+              isOpenDir = true;
+            }
+
+            // open the directory if the last snapshot had it open
+            if (this.explorer.opened && this.explorer.opened.indexOf(entryView.cssId()) != -1) {
               isOpenDir = true;
             }
 
@@ -453,7 +460,16 @@
         .empty()
         .append(entryEl);
 
-      this.renderDirectoryLevel(this.el, this.model);
+      var isOpen;
+
+      // allow top level open state to be snapshotted
+      if (this.explorer.opened && (this.explorer.opened.indexOf(entryView.cssId()) != -1)) {
+        isOpen = true;
+      } else {
+        isOpen = false;
+      }
+
+      this.renderDirectoryLevel(this.el, this.model, 0, isOpen);
 
       return this;
     }
@@ -534,22 +550,28 @@
       $(this.el).removeClass('backbone-file-explorer-busy');
     },
 
-    // take note of which folders have been toggled
-    snapShotToggledFolders: function() {
-      this.toggled = [];
+    // take note of which folders have been opened
+    snapShotOpenedFolders: function() {
+      this.opened = [];
       var self = this;
       $(this.el).find('.backbone-file-explorer-directory').each(function(index, value) {
-        if (!$(value).next().is(':visible')) {
-          self.toggled.push($(value).attr('id'));
+        if($(value).hasClass('backbone-file-explorer-directory_open')) {
+            self.opened.push($(value).attr('id'));
         }
       }); 
     },
 
-    // restore toggled folders to the previous snapshot
-    restoreToggledFolders: function() {
-      for (var index in this.toggled) {
-        var cssId = this.toggled[index];
-        this.toggleDirectory($('#' + cssId));
+    // restore opened folders to the previous snapshot
+    restoreOpenedFolders: function() {
+      for (var index in this.opened) {
+        var cssId = this.opened[index],
+            $openEl = $('#' + cssId);
+
+        // TODO: make this a helper function
+        $openEl.next().show();
+        if (!$openEl.hasClass('backbone-file-explorer-directory_open')) {
+          $openEl.addClass('backbone-file-explorer-directory_open');
+        }
       }
     },
 
@@ -627,7 +649,7 @@
         );
       }
 
-      this.snapShotToggledFolders();
+      this.snapShotOpenedFolders();
 
       this.dirView = new exports.DirectoryView({
         explorer: this,
@@ -648,7 +670,7 @@
         .empty()
         .append(this.dirView.render().el);
 
-      this.restoreToggledFolders();
+      this.restoreOpenedFolders();
 
       $('.backbone-file-explorer-entry:odd').addClass('backbone-file-explorer-entry-odd');
 
