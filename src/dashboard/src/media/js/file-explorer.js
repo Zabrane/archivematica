@@ -27,8 +27,16 @@
   exports.Data = {
     idPaths: {},
     startX: {},
-    startY: {}
+    startY: {},
+    mouseX: 0,
+    mouseY: 0
   };
+
+  /* Capture mouse position */
+  $(document).mousemove(function(event) {
+    exports.Data['mouseX'] = event.pageX;
+    exports.Data['mouseY'] = event.pageY;
+  });
 
   /* Internal representation of a file */
   exports.File = Backbone.Model.extend({
@@ -587,8 +595,8 @@
       }
 
       $el.css({'z-index': 1});
-      $el.css({left: event.offsetX - exports.Data.startX[id]});
-      $el.css({top: event.offsetY - exports.Data.startY[id]});
+      $el.css({left: exports.Data['mouseX'] - exports.Data.startX[id] + 5});
+      $el.css({top: exports.Data['mouseY'] - exports.Data.startY[id] + 5});
     },
 
     // logic to keep handle dropping a directory entry
