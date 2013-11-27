@@ -43,7 +43,8 @@
 
     // generate id without slashes and replacing periods
     id: function() {
-      return this.path().replace(/\//g, '_').replace('.', '__');
+      var path = this.path().replace(/\//g, '_').replace('.', '__');
+      return path.replace(/\ /g, '___');
     },
 
     path: function() {
