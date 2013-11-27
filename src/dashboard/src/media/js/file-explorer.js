@@ -586,7 +586,7 @@
     // logic to keep track of where a dragged directory entry is
     dragHandler: function(event) {
       var id = event.currentTarget.id
-        , $el = $('#' + event.currentTarget.id)
+        , $el = $("[id='" + event.currentTarget.id + "']")
         , offsets = $el.offset();
 
       if (exports.Data.startY[id] == undefined) {
