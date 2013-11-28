@@ -26,6 +26,7 @@ urlpatterns = patterns('components.filesystem_ajax.views',
 
     (r'^delete/$', 'delete'),
     (r'^copy_to_originals/$', 'copy_to_originals'),
+    (r'^move_within_arrange/$', 'move_within_arrange'),
     (r'^copy_to_arrange/$', 'copy_to_arrange'),
     (r'^copy_transfer_component/$', 'copy_transfer_component'),
     (r'^get_temp_directory/$', 'get_temp_directory'),

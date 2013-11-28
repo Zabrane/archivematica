@@ -44,13 +44,29 @@ function setupBacklogBrowser(originalsDirectory, arrangeDirectory) {
   }
 
   function moveHandler(move) {
+      console.log(move);
     // don't allow dragging stuff from originals directory?
     if (move.self.id != 'originals') {
       if (move.allowed) {
         move.self.busy();
 
+        // determine whether a move or copy should be performed
+        var actionUrlPath,
+            arrangeDir = 'var/archivematica/sharedDirectory/arrange/';
+
+        // do a move if drag and drop occurs within the arrange
+        // pane
+        if (
+          move.droppedPath.indexOf(arrangeDir) == 0
+          && move.containerPath.indexOf(arrangeDir) == 0
+        ) {
+          actionUrlPath = '/filesystem/move_within_arrange/';
+        } else {
+          actionUrlPath = '/filesystem/copy_to_arrange/';
+        }
+
         $.post(
-          '/filesystem/copy_to_arrange/',
+          actionUrlPath,
           {
             filepath: move.droppedPath,
             destination: move.containerPath
