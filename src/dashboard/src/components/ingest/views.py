@@ -40,6 +40,7 @@ from django.template import RequestContext
 from components import helpers
 from components import advanced_search
 import os, sys, MySQLdb, shutil
+import subprocess
 sys.path.append("/usr/lib/archivematica/archivematicaCommon")
 import elasticSearchFunctions, databaseInterface, databaseFunctions
 from archivematicaCreateStructuredDirectory import createStructuredDirectory
@@ -450,7 +451,7 @@ def transfer_awaiting_sip_creation(uuid):
 def process_transfer(request, transfer_uuid):
     response = {}
 
-    if request.user.id:
+    if request == None or request.user.id:
         # get transfer info
         transfer = models.Transfer.objects.get(uuid=transfer_uuid)
         transfer_path = transfer.currentlocation.replace(
@@ -462,6 +463,8 @@ def process_transfer(request, transfer_uuid):
 
         processingDirectory = helpers.get_server_config_value('processingDirectory')
         transfer_directory_name = os.path.basename(transfer_path[:-1])
+
+        # the transfer directory should have a UUID in it: remove it
         transfer_name = transfer_directory_name[:-37]
         sharedPath = helpers.get_server_config_value('sharedDirectory')
 
@@ -517,6 +520,37 @@ def process_transfer(request, transfer_uuid):
         response['message'] = 'Must be logged in.'
 
     return helpers.json_response(response)
+
+# currentlly requires transfer path directory to have UUID, add logic to auto-add UUID
+def _initiate_sip_from_completed_transfer_files(transfer_path):
+    transfer_uuid = str(uuid.uuid4())
+
+    transfer = models.Transfer()
+    transfer.uuid = transfer_uuid
+    transfer.currentlocation = transfer_path + '/'
+    transfer.type = 'Standard'
+    transfer.save()
+
+    objects_directory = os.path.join (transfer_path, 'objects')
+
+    # create file rows for each file in objects directory
+    for dirname, dirnames, filenames in os.walk(objects_directory):
+        for filename in filenames:
+            filepath = os.path.join(dirname, filename)
+            raw_result = subprocess.Popen(["md5sum", filepath],stdout=subprocess.PIPE).communicate()[0]
+            file.checksum = raw_result[0:32]
+            filepath = filepath.replace(objects_directory, '%transferDirectory%objects')
+            file = models.File()
+            file.uuid = str(uuid.uuid4())
+            file.transfer = transfer
+            file.originallocation = filepath
+            file.currentlocation = filepath
+            file.filegrpuse = 'original'
+            file.save()
+            print 'FP:' + filepath
+
+    print 'UUID:' + transfer_uuid
+    process_transfer(None, transfer_uuid)
 
 def transfer_file_download(request, uuid):
     # get file basename
