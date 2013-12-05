@@ -42,6 +42,7 @@ from components import advanced_search
 import os, sys, MySQLdb, shutil
 import subprocess
 sys.path.append("/usr/lib/archivematica/archivematicaCommon")
+from externals.checksummingTools import sha_for_file
 import elasticSearchFunctions, databaseInterface, databaseFunctions
 from archivematicaCreateStructuredDirectory import createStructuredDirectory
 from archivematicaCreateStructuredDirectory import createManualNormalizedDirectoriesList
@@ -464,8 +465,9 @@ def process_transfer(request, transfer_uuid):
         processingDirectory = helpers.get_server_config_value('processingDirectory')
         transfer_directory_name = os.path.basename(transfer_path[:-1])
 
-        # the transfer directory should have a UUID in it: remove it
+        # removed UUID from transfer directory name
         transfer_name = transfer_directory_name[:-37]
+
         sharedPath = helpers.get_server_config_value('sharedDirectory')
 
         tmpSIPDir = os.path.join(processingDirectory, transfer_name) + "/"
@@ -521,35 +523,48 @@ def process_transfer(request, transfer_uuid):
 
     return helpers.json_response(response)
 
-# currentlly requires transfer path directory to have UUID, add logic to auto-add UUID
-def _initiate_sip_from_completed_transfer_files(transfer_path):
+"""
+In order to create a SIP from some files that are structured as a completed transfer, but we created manually
+(via the SIP arrangement functionality) rather than in the Transfers tab, we have to create an internal
+database representation of the transfer. This database representation is referred to during SIP creation.
+"""
+def _initiate_sip_from_files_structured_like_a_completed_transfer(transfer_files_path):
     transfer_uuid = str(uuid.uuid4())
 
+    # add UUID to path because the backlog's transfer to SIP logic expects it
+    transfer_path = transfer_files_path + '-' + transfer_uuid
+    shutil.move(transfer_files_path, transfer_path)
+
+    # create transfer DB representation
     transfer = models.Transfer()
     transfer.uuid = transfer_uuid
     transfer.currentlocation = transfer_path + '/'
     transfer.type = 'Standard'
     transfer.save()
 
-    objects_directory = os.path.join (transfer_path, 'objects')
-
     # create file rows for each file in objects directory
+    objects_directory = os.path.join(transfer_path, 'objects')
     for dirname, dirnames, filenames in os.walk(objects_directory):
         for filename in filenames:
             filepath = os.path.join(dirname, filename)
-            raw_result = subprocess.Popen(["md5sum", filepath],stdout=subprocess.PIPE).communicate()[0]
-            file.checksum = raw_result[0:32]
-            filepath = filepath.replace(objects_directory, '%transferDirectory%objects')
-            file = models.File()
-            file.uuid = str(uuid.uuid4())
-            file.transfer = transfer
-            file.originallocation = filepath
-            file.currentlocation = filepath
-            file.filegrpuse = 'original'
-            file.save()
-            print 'FP:' + filepath
 
-    print 'UUID:' + transfer_uuid
+            new_file = models.File()
+            new_file.uuid = str(uuid.uuid4())
+            new_file.transfer = transfer
+
+            # properties that need to be determined using normal path
+            new_file.checksum = sha_for_file(filepath).__str__()
+            new_file.size = os.path.getsize(filepath).__str__()
+            new_file.filegrpuse = 'original'
+
+            # properties that need to be set using abbreviated path
+            filepath = filepath.replace(objects_directory, '%transferDirectory%objects')
+            new_file.originallocation = filepath
+            new_file.currentlocation = filepath
+            new_file.save()
+            print 'FP:' + filepath
+            print 'FU:' + new_file.uuid
+
     process_transfer(None, transfer_uuid)
 
 def transfer_file_download(request, uuid):
