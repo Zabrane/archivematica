@@ -331,7 +331,13 @@ def copy_to_start_transfer(request):
     return helpers.json_response(response)
 
 def copy_from_arrange_to_completed(request):
-    return copy_to_originals(request)
+    filepath = '/' + request.POST.get('filepath', '')
+    from components.ingest import views
+
+    if filepath != '':
+        views._initiate_sip_from_files_structured_like_a_completed_transfer(filepath)
+
+    #return copy_to_originals(request)
 
 def move_within_arrange(request):
     sourcepath  = request.POST.get('filepath', '')
