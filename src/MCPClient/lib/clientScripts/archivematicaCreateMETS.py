@@ -73,6 +73,32 @@ def newChild(parent, tag, text=None, tailText=None):
     return child
 
 
+def add_transfer_metadata(transferUUID, root):
+    sql = "SELECT pk FROM TransferMetadataSets TS \
+           INNER JOIN Transfers T ON TS.pk = T.transferMetadataSetRowUUID"
+    c, sqlLock = databaseInterface.querySQL(sql)
+    ts, = c.fetchone()
+    sqlLock.release()
+
+    sql = "SELECT fieldLabel, fieldValue, filePath FROM TransferMetadataFieldValues FV \
+           INNER JOIN TransferMetadataFields TF ON FV.fieldUUID = TF.pk \
+           WHERE TF.setUUID = {}".format(ts)
+    c, sqlLock = databaseInterface.querySQL(sql)
+    components = {}
+    for row in c:
+        label, value, path = row
+        if not components.fetch(path):
+            components[path] = []
+        e = etree.Element(label)
+        e.text = value
+        components[path].append(e)
+    sqlLock.release()
+
+    for component, elements in components.iteritems():
+        objectCharacteristicsExtension = etree.SubElement(root, "objectCharacteristicsExtension")
+        for el in elements:
+            objectCharacteristicsExtension.append(el)
+
 
 #Do /SIP-UUID/
 #Force only /SIP-UUID/objects
