@@ -565,7 +565,17 @@ def _initiate_sip_from_files_structured_like_a_completed_transfer(transfer_files
             print 'FP:' + filepath
             print 'FU:' + new_file.uuid
 
+
+    # create ElasticSearch representation of transfer data
+    elasticSearchFunctions.connect_and_index_files(
+        'transfers',
+        'transferfile',
+        transfer_uuid,
+        transfer_path
+    )
+
     process_transfer(None, transfer_uuid)
+    shutil.rmtree(transfer_path)
 
 def transfer_file_download(request, uuid):
     # get file basename
