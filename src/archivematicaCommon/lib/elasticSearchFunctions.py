@@ -21,6 +21,11 @@
 # @subpackage archivematicaCommon
 # @author Mike Cantelon <mike@artefactual.com>
 
+import logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename="/tmp/archivematicaDashboard.log",
+    level=logging.INFO)
+
 import time, os, sys, MySQLdb, cPickle, base64, ConfigParser, datetime
 sys.path.append("/usr/lib/archivematica/archivematicaCommon")
 import databaseInterface
