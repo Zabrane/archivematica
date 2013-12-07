@@ -17,7 +17,12 @@ You should have received a copy of the GNU General Public License
 along with Archivematica.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+var transferMetadataSetRowUUID;
+var transferDirectoryPickerPathCounter = 1;
+
 function createDirectoryPicker(locationUUID, baseDirectory, modalCssId, targetCssId) {
+  var pathTemplateCssId = 'transfer-component-path-item';
+
   var selector = new DirectoryPickerView({
     ajaxChildDataUrl: '/filesystem/children/location/' + locationUUID + '/',
     el: $('#explorer'),
@@ -31,10 +36,12 @@ function createDirectoryPicker(locationUUID, baseDirectory, modalCssId, targetCs
     'children': []
   };
 
+  selector.pathTemplateRender = _.template($('#' + pathTemplateCssId).html());
+
   selector.options.entryDisplayFilter = function(entry) {
     // if a file and not an archive file, then hide
     if (
-      entry.children == undefined
+      entry.children === undefined
       && entry.attributes.name.toLowerCase().indexOf('.zip') == -1
       && entry.attributes.name.toLowerCase().indexOf('.tgz') == -1
       && entry.attributes.name.toLowerCase().indexOf('.tar.gz') == -1
@@ -49,18 +56,74 @@ function createDirectoryPicker(locationUUID, baseDirectory, modalCssId, targetCs
     description: 'Select',
     iconHtml: 'Add',
     logic: function(result) {
-      var $transferPathRowEl = $('<div></div>')
-        , $transferPathEl = $('<span class="transfer_path"></span>')
-        , $transferPathDeleteRl = $('<span style="margin-left: 1em;"><img src="/media/images/delete.png" /></span>');
+      // disable transfer type select as disk image transfer types
+      // are displayed with a metadata editing option, but others
+      // are not
+      $('#transfer-type').attr('disabled', 'disabled');
 
-      $transferPathDeleteRl.click(function() {
-        $transferPathRowEl.remove();
+      // render path component
+      $('#' + targetCssId).append(selector.pathTemplateRender({
+        'path_counter': transferDirectoryPickerPathCounter,
+        'path': result.path,
+        'edit_icon': '1',
+        'delete_icon': '2'
+      }));
+
+      // enable editing of transfer component metadata
+      if ($('#transfer-type').val() == 'disk image') {
+        var $transferEditIconEl = $(
+          '#' + pathTemplateCssId + '-' + transferDirectoryPickerPathCounter
+        ).children('.transfer_path_icons').children('.transfer_path_edit_icon');
+
+        // Fix up the temporary path that was assigned previously to point to the real path
+        // that's now been assigned
+        var path = $('#transfer-component-path-item-' + transferDirectoryPickerPathCounter + ' > .transfer_path').text();
+        var temp_path = "metadata-component-" + transferDirectoryPickerPathCounter;
+        var update_metadata_url = '/transfer/rename_metadata_set/' + transferMetadataSetRowUUID +
+          '/' + temp_path + '/';
+        console.log(update_metadata_url);
+
+        $.ajax({
+          'url': update_metadata_url,
+          'type': 'POST',
+          'async': false,
+          'cache': false,
+          'data': {
+            'path': path
+          },
+          'success': function(results) {
+            console.log(results);
+          },
+          'error': function() {
+            alert('Error: unable to update metadata set ID. Contact administrator.');
+          }
+        });
+
+        $transferEditIconEl.click(function() {
+          var component_metadata_url = '/transfer/component/' + transferMetadataSetRowUUID + '/?path=' + encodeURIComponent(path);
+          window.open(component_metadata_url, '_blank');
+        });
+
+        $transferEditIconEl.show();
+      }
+
+      // activate edit and delete icons
+      $('#' + pathTemplateCssId + '-' + transferDirectoryPickerPathCounter)
+      .children('.transfer_path_icons')
+      .children('.transfer_path_delete_icon')
+      .click(function() {
+        if (confirm('Are you sure you want to remove this transfer component?')) {
+          $(this).parent().parent().remove();
+          if ($('.transfer_path').length < 1) {
+            // re-enable transfer type select
+            $('#transfer-type').removeAttr('disabled');
+          }
+        }
       });
 
-      $transferPathEl.html(result.path);
-      $transferPathRowEl.append($transferPathEl);
-      $transferPathRowEl.append($transferPathDeleteRl);
-      $('#' + targetCssId).append($transferPathRowEl);
+      transferDirectoryPickerPathCounter++;
+
+      // remove directory picker
       $('#' + modalCssId).remove();
 
       // tiger stripe transfer paths
