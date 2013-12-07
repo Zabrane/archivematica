@@ -31,7 +31,7 @@ for dir in ${dirs[@]}
 do
     if [ "$(ls -A $dir)" ]; then
         find $dir -type l | while read file ; do
-            if [[ ! ${file} =~ "storage" ]]; then
+            if [[ ! ${file} =~ (storage|samba) ]]; then
                 sudo rm ${file}
             fi
         done
