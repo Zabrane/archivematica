@@ -25,6 +25,7 @@ from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect
 from django.contrib import messages
 import json
+import logging
 from contrib.mcp.client import MCPClient
 from contrib import utils
 from main import forms
@@ -50,6 +51,10 @@ sys.path.append("/usr/lib/archivematica/archivematicaCommon/externals")
 import pyes, requests
 from components.archival_storage.forms import StorageSearchForm
 import time
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename="/tmp/archivematicaDashboard.log",
+    level=logging.INFO)
 
 """ @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
       Ingest
@@ -562,16 +567,13 @@ def _initiate_sip_from_files_structured_like_a_completed_transfer(transfer_files
             new_file.originallocation = filepath
             new_file.currentlocation = filepath
             new_file.save()
-            print 'FP:' + filepath
-            print 'FU:' + new_file.uuid
-
 
     # create ElasticSearch representation of transfer data
     elasticSearchFunctions.connect_and_index_files(
         'transfers',
         'transferfile',
         transfer_uuid,
-        transfer_path
+        transfer_path + 'objects'
     )
 
     process_transfer(None, transfer_uuid)

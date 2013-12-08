@@ -19,6 +19,7 @@ from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.db import connection
 import os
 from subprocess import call
+import logging
 import shutil
 import MySQLdb
 import tempfile
@@ -38,6 +39,10 @@ import storageService as storage_service
 # for unciode sorting support
 import locale
 locale.setlocale(locale.LC_ALL, '')
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename="/tmp/archivematicaDashboard.log",
+    level=logging.INFO)
 
 SHARED_DIRECTORY_ROOT   = '/var/archivematica/sharedDirectory'
 ORIGINALS_DIR           = SHARED_DIRECTORY_ROOT + '/transferBackups/originals'
