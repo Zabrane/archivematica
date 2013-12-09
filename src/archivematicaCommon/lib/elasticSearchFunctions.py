@@ -578,8 +578,10 @@ def connect_and_change_transfer_file_status(uuid, status):
                     document_id = document_id_from_field_query(conn, 'transfers', ['transferfile'], 'fileuuid', row[0])
 
                     if document_id == None:
-                        print >>sys.stderr, 'Transfer file ', row[0], ' not found in index.'
-                        print 'Transfer file ' + row[0] + ' not found in index.'
+                        error_message = 'Transfer file ', row[0], ' not found in index.'
+                        logging.warning(error_message)
+                        print >>sys.stderr, error_message
+                        print error_message
                         exit(1)
                     else:
                         conn.update({'status': status}, 'transfers', 'transferfile', document_id)
