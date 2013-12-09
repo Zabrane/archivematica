@@ -8,7 +8,7 @@ CREATE TABLE TransferMetadataSets (
   createdByUserID INT(11) NOT NULL,
   transferType VARCHAR(50) NOT NULL,
   PRIMARY KEY (pk)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 ALTER TABLE Transfers ADD COLUMN transferMetadataSetRowUUID VARCHAR(36);
 
@@ -21,7 +21,7 @@ CREATE TABLE TransferMetadataFields (
   optionTaxonomyUUID VARCHAR(36) NOT NULL,
   sortOrder INT(11) DEFAULT 0,
   PRIMARY KEY (pk)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 INSERT INTO TransferMetadataFields (pk, createdTime, fieldLabel, fieldName, fieldType, sortOrder)
     VALUES ('fc69452c-ca57-448d-a46b-873afdd55e15', UNIX_TIMESTAMP(), 'Media number', 'media_number', 'text', 0);
@@ -76,7 +76,7 @@ CREATE TABLE TransferMetadataFieldValues (
   fieldUUID VARCHAR(36) NOT NULL,
   fieldValue LONGTEXT DEFAULT '',
   PRIMARY KEY (pk)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 CREATE TABLE Taxonomies (
   pk varchar(36) NOT NULL,
@@ -84,7 +84,7 @@ CREATE TABLE Taxonomies (
   name VARCHAR(255) DEFAULT '',
   type VARCHAR(50) NOT NULL DEFAULT 'open',
   PRIMARY KEY (pk)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 INSERT INTO Taxonomies (pk, name) VALUES ('312fc2b3-d786-458d-a762-57add7f96c22', 'Disk media formats');
 INSERT INTO Taxonomies (pk, name) VALUES ('f6980e68-bac2-46db-842b-da4eba4ba418', 'Disk media densities');
@@ -99,7 +99,7 @@ CREATE TABLE TaxonomyTerms (
   taxonomyUUID varchar(36) NOT NULL,
   term varchar(255) DEFAULT '',
   PRIMARY KEY (pk)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 INSERT INTO TaxonomyTerms (pk, taxonomyUUID, term)
   VALUES ('867ab18d-e860-445f-a254-8fcdebfe95b6', '312fc2b3-d786-458d-a762-57add7f96c22', '3.5" floppy');
