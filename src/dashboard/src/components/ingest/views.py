@@ -573,7 +573,7 @@ def _initiate_sip_from_files_structured_like_a_completed_transfer(transfer_files
         'transfers',
         'transferfile',
         transfer_uuid,
-        transfer_path + 'objects'
+        os.path.join(transfer_path, 'objects')
     )
 
     process_transfer(None, transfer_uuid)
