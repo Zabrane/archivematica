@@ -577,7 +577,6 @@ def _initiate_sip_from_files_structured_like_a_completed_transfer(transfer_files
     )
 
     process_transfer(None, transfer_uuid)
-    shutil.rmtree(transfer_path)
 
 def transfer_file_download(request, uuid):
     # get file basename
