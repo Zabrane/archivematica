@@ -306,7 +306,9 @@ def connect_and_index_files(index, type, uuid, pathToArchive, sipName=None):
             print 'Files indexed: ' + str(filesIndexed)
 
         else:
-            print >>sys.stderr, "Directory does not exist: ", pathToArchive
+            error_message = "Directory does not exist: " + pathToArchive
+            logging.warning(error_message)
+            print >>sys.stderr, error_message
             exitCode = 1
     else:
         print >>sys.stderr, "Elasticsearch not found, normally installed at ", pathToElasticSearchServerConfigFile
