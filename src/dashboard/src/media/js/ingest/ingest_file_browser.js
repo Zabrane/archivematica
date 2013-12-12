@@ -75,6 +75,7 @@ function setupBacklogBrowser(originalsDirectory, arrangeDirectory) {
           },
           function(result) {
             if (result.error == undefined) {
+              // TODO: remove from DOM
               arrange.refresh(arrangeDirectory);
             } else {
               alert(result.message);
