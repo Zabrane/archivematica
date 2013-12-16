@@ -26,7 +26,6 @@ function setupBacklogBrowser(originalsDirectory, arrangeDirectory) {
         , entryId = $(this).attr('id')
         , borderCssSpec = '1px solid red';
 
-      console.log(explorer);
       if (explorer.selectedEntryId == entryId) {
         // un-highlight selected entry
         $(entryEl).css('border', '');
