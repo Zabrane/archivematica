@@ -201,12 +201,17 @@ $(document).ready(function() {
   var createOpenHandler = function(browser) {
       return function() {
         var entryDiv = $('#' + browser.selectedEntryId)
-           , path = browser.getPathForCssId(browser.selectedEntryId);
+           , path = browser.getPathForCssId(browser.selectedEntryId)
+           , type = browser.getTypeForCssId(browser.selectedEntryId);
 
-        window.open(
-          '/filesystem/download?filepath=' + encodeURIComponent(path),
-          '_blank'
-        );
+        if (type == 'directory') {
+          browser.alert('Error', 'You can not open a directory.');
+        } else {
+          window.open(
+            '/filesystem/download?filepath=' + encodeURIComponent(path),
+            '_blank'
+          );
+        }
       };
   };
 
